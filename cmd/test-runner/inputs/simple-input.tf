@@ -1,49 +1,130 @@
-resource "aws_cloudformation_stack" "cur_athena_stack" {
-  name = "CUR-AthenaStack"
+module "komueb_3873_aws_cost_management" {
+  source = "../modules/aws-account"
 
-  parameters = {
-    SourceAccountID = local.org_management_account
-    Stage = local.project_stage
+  name                  = "AWS Cost Management"
+  organizational_unit   = local.organizational_unit_workloads_prod
+  cost_center           = 1187
+  komueb_product_ticket = "KOMUEB-3873"
+
+  owner_email         = "moritz.brettschneider@idealo.de"
+  owner_jira_username = "m.brettschneider"
+
+  group_permissions = {
+    "Cloud Shuttle"   = [
+      "AWSAdministratorAccess",
+      module.controlling_access_permission_set.permission_set_name
+    ],
+    "controlling-aws" = [
+      module.controlling_access_permission_set.permission_set_name,
+      module.controlling_access_permission_set.permission_set_name
+    ],
+    "pt-po-all" = [
+      module.controlling_access_permission_set.permission_set_name
+    ],
+    "pt-headofs" = [
+      module.controlling_access_permission_set.permission_set_name
+    ],
+    "pt-teamleads" = [
+      module.controlling_access_permission_set.permission_set_name
+    ]
   }
-
-  capabilities = ["CAPABILITY_IAM"]
-
-  template_body = file("${path.module}/stacks/cur-athena.yml")
+  user_permissions  = {
+    "marcus.janke@idealo.de"    = [
+      module.controlling_access_permission_set.permission_set_name
+    ],
+    "nicole.jaenchen@idealo.de" = [
+      module.controlling_access_permission_set.permission_set_name
+    ]
+  }
 }
 
-resource "aws_s3_bucket" "athena_query_results" {
-  bucket = "${data.aws_caller_identity.current.account_id}-athena-query-results"
-  acl    = "private"
+module "controlling_access_permission_set" {
+  source                  = "../modules/aws-ssoadmin-permission-set"
+  name                    = "ControllingCostReportAccess"
+  ssoadmin_instance_arn   = local.ssoadmin_instance_arn
+  inline_policy_documents = [
+    data.aws_iam_policy_document.cost_controlling_access_policy.json
+  ]
+}
 
-  versioning {
-    enabled = true
+data "aws_iam_policy_document" "cost_controlling_access_policy" {
+  statement {
+    sid = "AthenaQueryExecAccess"
+    actions   = [
+      "athena:GetWorkGroup",
+      "athena:GetQueryExecution",
+      "athena:GetQueryResultsStream",
+      "athena:GetQueryResults",
+      "athena:ListQueryExecutions",
+      "athena:ListNamedQueries",
+      "athena:CreateNamedQuery",
+      "athena:StartQueryExecution",
+      "athena:StopQueryExecution"
+    ]
+    resources = [
+      "arn:aws:athena:eu-central-1:173900957619:workgroup/primary"
+    ]
   }
-
-  logging {
-    target_bucket = "${data.aws_caller_identity.current.account_id}-${data.aws_region.current.name}-s3-access-logs"
-    target_prefix = "logs/"
+  statement {
+    sid = "GlueReadAccess"
+    actions   = [
+      "glue:GetDatabase",
+      "glue:GetDatabases",
+      "glue:GetTable",
+      "glue:GetTables",
+      "glue:GetPartition",
+      "glue:GetPartitions"
+    ]
+    resources = [
+      "arn:aws:glue:eu-central-1:173900957619:catalog",
+      "arn:aws:glue:eu-central-1:173900957619:database/athenacurcfn_general_cost_and_usage_report_idealo_prod",
+      "arn:aws:glue:eu-central-1:173900957619:table/athenacurcfn_general_cost_and_usage_report_idealo_prod/cost_and_usage_data_status",
+      "arn:aws:glue:eu-central-1:173900957619:table/athenacurcfn_general_cost_and_usage_report_idealo_prod/general_cost_and_usage_report_idealo_prod"
+    ]
   }
-
-  server_side_encryption_configuration {
-    rule {
-      apply_server_side_encryption_by_default {
-        sse_algorithm = "AES256"
-      }
-
-      bucket_key_enabled = true
-    }
+  statement {
+    sid = "S3DataSourceReadAccess"
+    actions   = [
+      "s3:ListBucket",
+      "s3:GetObject"
+    ]
+    resources = [
+      "arn:aws:s3:::957502001809-general-cost-and-usage-reports",
+      "arn:aws:s3:::957502001809-general-cost-and-usage-reports/*"
+    ]
   }
-
-  lifecycle_rule {
-    id = "DeleteOldQueryResults"
-    enabled = true
-
-    expiration {
-      days = 40
-    }
-
-    noncurrent_version_expiration {
-      days = 3
-    }
+  statement {
+    sid = "S3QueryResultsStorageAccess"
+    actions   = [
+      "s3:ListBucket",
+      "s3:GetBucketLocation",
+      "s3:GetObject",
+      "s3:PutObject",
+    ]
+    resources = [
+      "arn:aws:s3:::173900957619-athena-query-results",
+      "arn:aws:s3:::173900957619-athena-query-results/*"
+    ]
+  }
+  statement {
+    sid = "S3CostReportsAccess"
+    actions   = [
+      "s3:ListBucket",
+      "s3:GetObject"
+    ]
+    resources = [
+      "arn:aws:s3:::173900957619-cost-reports-for-controlling/*",
+      "arn:aws:s3:::173900957619-cost-reports-for-controlling",
+      "arn:aws:s3:::173900957619-cost-reports-by-cost-center/*",
+      "arn:aws:s3:::173900957619-cost-reports-by-cost-center"
+    ]
+  }
+  statement {
+    actions   = [
+      "s3:ListAllMyBuckets"
+    ]
+    resources = [
+      "*"
+    ]
   }
 }

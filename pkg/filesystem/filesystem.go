@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/hashicorp/hcl/v2"
 	"io/ioutil"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -15,6 +16,7 @@ type FS interface {
 	Open(name string) (File, error)
 	ReadFile(name string) ([]byte, error)
 	ReadDir(dirname string) ([]os.FileInfo, error)
+	MakeDirs(name string)
 }
 
 // File represents an open file in FS
@@ -104,4 +106,11 @@ func isIgnoredFile(name string) bool {
 	return strings.HasPrefix(name, ".") || // Unix-like hidden files
 		strings.HasSuffix(name, "~") || // vim
 		strings.HasPrefix(name, "#") && strings.HasSuffix(name, "#") // emacs
+}
+
+func (fs *osFs) MakeDirs(name string) {
+	err := os.MkdirAll(name, 0755)
+	if err != nil {
+		log.Fatal(err)
+	}
 }
