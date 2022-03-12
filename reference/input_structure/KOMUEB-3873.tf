@@ -60,36 +60,6 @@ module "komueb_3873_aws_cost_management" {
       module.controlling_access_permission_set.permission_set_name
     ]
   }
-  user_permissions  = {
-    "marcus.janke@idealo.de"    = [
-      module.cost_center_access_permission_set["1181"].permission_set_name
-    ],
-    "nicole.jaenchen@idealo.de" = [
-      module.cost_center_access_permission_set["1181"].permission_set_name
-    ],
-    "stefan.hansel@idealo.de"   = [
-      module.cost_center_access_permission_set["1600"].permission_set_name
-    ],
-    "robin.kaluzny@idealo.de"   = [
-      module.cost_center_access_permission_set["1645"].permission_set_name
-    ],
-    "hendrik.jager@idealo.de"   = [
-      module.cost_center_access_permission_set["1645"].permission_set_name
-    ],
-    "sean.gustafson@idealo.de"  = [
-      module.cost_center_access_permission_set["1609"].permission_set_name
-    ],
-    "theresa.doll@idealo.de" = [
-      module.cost_center_access_permission_set["1602"].permission_set_name,
-      module.cost_center_access_permission_set["1696"].permission_set_name
-    ],
-    "tino.nitze@idealo.de" = [
-      module.cost_center_access_permission_set["1610"].permission_set_name
-    ],
-    "alexander.schuettler@idealo.de" = [
-      module.cost_center_access_permission_set["1610"].permission_set_name
-    ]
-  }
 }
 
 locals {

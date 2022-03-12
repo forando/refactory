@@ -1,9 +1,9 @@
-package parser
+package schema
 
 type ParsingError struct {
-	message string
+	Message string
 }
 
 func (e ParsingError) Error() string {
-	return e.message
+	return e.Message
 }

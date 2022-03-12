@@ -114,3 +114,12 @@ func (fs *osFs) MakeDirs(name string) {
 		log.Fatal(err)
 	}
 }
+
+func PrintPWD() {
+	dir, err := os.Getwd()
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println("Current working directory:")
+	fmt.Println(dir)
+}
