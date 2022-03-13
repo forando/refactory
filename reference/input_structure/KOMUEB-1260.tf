@@ -19,20 +19,12 @@ module "komueb_1260_order_processing_production" {
   personal_data_stored    = true
 
   group_permissions = {
-    "pt-after_sales-oncall"           = ["AWSAdministratorAccess", "AWSReadOnlyAccess"]
+    "pt-after_sales-oncall"           = ["AWSAdministratorAccess"]
     "pt-after_sales-order-processing" = [
       module.komueb_1260_extended_read_only_access_permission_set.permission_set_name
     ]
     "pt-order_employee_report-files" = [
       module.komueb_1260_order_employee_report_files_access_permission_set.permission_set_name
-    ]
-  }
-  user_permissions  = {
-    "marcus.janke@idealo.de"    = [
-      module.komueb_1260_extended_read_only_access_permission_set.permission_set_name
-    ],
-    "nicole.jaenchen@idealo.de" = [
-      module.komueb_1260_extended_read_only_access_permission_set.permission_set_name
     ]
   }
 }

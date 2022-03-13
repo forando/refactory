@@ -45,11 +45,16 @@ func parseDataBlock(block *hclwrite.Block) (*schema.BlockMetaData, error) {
 		return nil, schema.ParsingError{Message: "Data Block does not have labels"}
 	}
 
-	if labels[0] != schema.IamPolicyDocumentType {
-		return nil, schema.ParsingError{Message: fmt.Sprintf("Unexpected Data Block Type: [%s]", labels[0])}
+	dataBlockType := labels[0]
+	if dataBlockType != schema.IamPolicyDocumentType {
+		return nil, schema.ParsingError{Message: fmt.Sprintf("Unexpected Data Block Type: [%s]", dataBlockType)}
 	}
 
-	return &schema.BlockMetaData{BlockType: schema.IamPolicyDocumentType, BlockName: labels[0]}, nil
+	if len(labels) < 2 {
+		return nil, schema.ParsingError{Message: fmt.Sprintf("Data Block: [%s] does not have name", dataBlockType)}
+	}
+
+	return &schema.BlockMetaData{BlockType: schema.IamPolicyDocumentType, BlockName: labels[1]}, nil
 }
 
 func parseModuleBlock(block *hclwrite.Block) (*schema.BlockMetaData, error) {

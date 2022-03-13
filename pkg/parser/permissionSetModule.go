@@ -6,7 +6,7 @@ import (
 	"github.com/hashicorp/hcl/v2/hclwrite"
 )
 
-func ParsePermissionSetModule(body *hclwrite.Body) (*schema.PermissionSetModule, error) {
+func ParsePermissionSetModule(body *hclwrite.Body, policyDocuments *map[string]*hclwrite.Block) (*schema.PermissionSetModule, error) {
 	var module schema.PermissionSetModule
 
 	attr := body.Attributes()
@@ -17,7 +17,7 @@ func ParsePermissionSetModule(body *hclwrite.Body) (*schema.PermissionSetModule,
 
 	var key string
 
-	key = "name"
+	key = schema.PsName
 	nameAttr := attr[key]
 	if nameAttr == nil {
 		return makePermissionSetError(key)
@@ -32,26 +32,34 @@ func ParsePermissionSetModule(body *hclwrite.Body) (*schema.PermissionSetModule,
 	}
 	module.SourceAttr = sourceAttr
 
-	key = "ssoadmin_instance_arn"
+	key = schema.PsSsoAdminInstanceArn
 	ssoAdminInstanceArnAttr := attr[key]
 	if ssoAdminInstanceArnAttr == nil {
 		return makePermissionSetError(key)
 	}
 	module.SsoAdminInstanceArnAttr = ssoAdminInstanceArnAttr
 
-	key = "inline_policy_documents"
+	key = schema.PsInlinePolicyDocument
 	inlinePolicyDocumentsAttr := attr[key]
 	if inlinePolicyDocumentsAttr != nil {
+
+		pDocName := string(inlinePolicyDocumentsAttr.Expr().BuildTokens(nil)[4].Bytes)
+		pDockBlock, found := (*policyDocuments)[pDocName]
+		if !found {
+			return nil, schema.ParsingError{Message: fmt.Sprintf("cannot find [%s] policyDocument", pDocName)}
+		}
 		module.InlinePolicyDocumentsAttr = inlinePolicyDocumentsAttr
+		module.PolicyDocument = pDockBlock
+		module.PolicyDocumentName = pDocName
 	}
 
-	key = "managed_policy_arns"
+	key = schema.PsManagedPolicyArns
 	managedPolicyArnsAttr := attr[key]
 	if managedPolicyArnsAttr != nil {
 		module.ManagedPolicyArnsAttr = managedPolicyArnsAttr
 	}
 
-	key = "tags"
+	key = schema.PsTags
 	tagsAttr := attr[key]
 	if tagsAttr != nil {
 		module.TagsAttr = tagsAttr

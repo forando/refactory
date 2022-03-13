@@ -20,7 +20,7 @@ var organizationalUnits = map[string]string{
 	"organizational_unit_suspended":           "Suspended",
 }
 
-func ParseAccountModule(body *hclwrite.Body, permissionSetNames map[string]string) (*schema.AccountModule, error) {
+func ParseAccountModule(body *hclwrite.Body, permissionSetNames *map[string]string) (*schema.AccountModule, error) {
 	var module schema.AccountModule
 
 	attr := body.Attributes()
@@ -31,14 +31,14 @@ func ParseAccountModule(body *hclwrite.Body, permissionSetNames map[string]strin
 
 	var key string
 
-	key = "name"
+	key = schema.AccName
 	accountNameAttr := attr[key]
 	if accountNameAttr == nil {
 		return makeError(key)
 	}
 	module.AccountName = getExpressionAsString(accountNameAttr)
 
-	key = "organizational_unit"
+	key = schema.AccOrganizationalUnit
 	organizationalUnitAttr := attr[key]
 	if organizationalUnitAttr == nil {
 		return makeError(key)
@@ -46,11 +46,11 @@ func ParseAccountModule(body *hclwrite.Body, permissionSetNames map[string]strin
 	ouKey := string(organizationalUnitAttr.Expr().BuildTokens(nil)[2].Bytes)
 	organizationalUnit, ok := organizationalUnits[ouKey]
 	if !ok {
-		return nil, schema.ParsingError{fmt.Sprintf("cannot find [%s] key in organizationalUnits map", ouKey)}
+		return nil, schema.ParsingError{Message: fmt.Sprintf("cannot find [%s] key in organizationalUnits map", ouKey)}
 	}
 	module.OrganizationalUnit = organizationalUnit
 
-	key = "cost_center"
+	key = schema.AccCostCenter
 	costCenterAttr := attr[key]
 	if costCenterAttr == nil {
 		return makeError(key)
@@ -62,28 +62,28 @@ func ParseAccountModule(body *hclwrite.Body, permissionSetNames map[string]strin
 	}
 	module.CostCenter = intVar
 
-	key = "komueb_product_ticket"
+	key = schema.AccKomuebProductTicket
 	productTicketAttr := attr[key]
 	if productTicketAttr == nil {
 		return makeError(key)
 	}
 	module.ProductTicket = getExpressionAsString(productTicketAttr)
 
-	key = "owner_email"
+	key = schema.AccOwnerEmail
 	emailAttr := attr[key]
 	if emailAttr == nil {
 		return makeError(key)
 	}
 	module.OwnerEmail = getExpressionAsString(emailAttr)
 
-	key = "owner_jira_username"
+	key = schema.AccOwnerJiraUsername
 	jiraUserNameAttr := attr[key]
 	if jiraUserNameAttr == nil {
 		return makeError(key)
 	}
 	module.OwnerJiraUsername = getExpressionAsString(jiraUserNameAttr)
 
-	key = "group_permissions"
+	key = schema.AccGroupPermissions
 	groupPermissionsAttr := attr[key]
 	if groupPermissionsAttr == nil {
 		return makeError(key)
@@ -94,7 +94,7 @@ func ParseAccountModule(body *hclwrite.Body, permissionSetNames map[string]strin
 	}
 	module.GroupPermissions = groupPermissions
 
-	key = "user_permissions"
+	key = schema.AccUserPermissions
 	userPermissionsAttr := attr[key]
 	if userPermissionsAttr != nil {
 		userPermissions, err := parsePermissions(userPermissionsAttr, key, permissionSetNames)
@@ -104,7 +104,7 @@ func ParseAccountModule(body *hclwrite.Body, permissionSetNames map[string]strin
 		module.UserPermissions = userPermissions
 	}
 
-	key = "personal_data_processed"
+	key = schema.AccPersonalDataProcessed
 	personalDataProcessedAttr := attr[key]
 	if personalDataProcessedAttr != nil {
 		personalDataProcessedStr := getExpressionAsString(personalDataProcessedAttr)
@@ -115,7 +115,7 @@ func ParseAccountModule(body *hclwrite.Body, permissionSetNames map[string]strin
 		module.PersonalDataProcessed = boolVar
 	}
 
-	key = "personal_data_stored"
+	key = schema.AccPersonalDataStored
 	personalDataStoredAttr := attr[key]
 	if personalDataStoredAttr != nil {
 		personalDataStoredStr := getExpressionAsString(personalDataStoredAttr)
@@ -126,13 +126,13 @@ func ParseAccountModule(body *hclwrite.Body, permissionSetNames map[string]strin
 		module.PersonalDataStored = boolVar
 	}
 
-	key = "root_email"
+	key = schema.AccRootEmail
 	rootEmailAttr := attr[key]
 	if rootEmailAttr != nil {
 		module.RootEmail = getExpressionAsString(rootEmailAttr)
 	}
 
-	key = "account_budget"
+	key = schema.AccAccountBudget
 	accountBudgetAttr := attr[key]
 	if accountBudgetAttr != nil {
 		accountBudgetStr := getExpressionAsString(accountBudgetAttr)
@@ -143,7 +143,7 @@ func ParseAccountModule(body *hclwrite.Body, permissionSetNames map[string]strin
 		module.AccountBudget = intVar
 	}
 
-	key = "account_budget_email"
+	key = schema.AccAccountBudgetEmail
 	accountBudgetEmailAttr := attr[key]
 	if accountBudgetEmailAttr != nil {
 		module.AccountBudgetEmail = getExpressionAsString(accountBudgetEmailAttr)
@@ -152,12 +152,9 @@ func ParseAccountModule(body *hclwrite.Body, permissionSetNames map[string]strin
 	return &module, nil
 }
 
-func parsePermissions(permissionAttr *hclwrite.Attribute, permissionsType string, permissionSetNames map[string]string) (map[string][]string, error) {
+func parsePermissions(permissionAttr *hclwrite.Attribute, permissionsType string, permissionSetNames *map[string]string) (map[string][]string, error) {
 
 	expr := permissionAttr.Expr()
-	/*tokens := hclwrite.Tokens{
-		{Type: hclsyntax.TokenIdent, Bytes: []byte(`dummy`)},
-	}*/
 	exprTokens := expr.BuildTokens(nil)
 
 	oBrace := exprTokens[0]
@@ -181,7 +178,7 @@ func parsePermissions(permissionAttr *hclwrite.Attribute, permissionsType string
 			if keyProcessed {
 				key = quotedTokensToString(tokens)
 
-				if _, ok := res[key]; ok {
+				if _, found := res[key]; found {
 					return nil, schema.ParsingError{Message: fmt.Sprintf("%s expression. Key [%s] already exists", permissionsType, key)}
 				}
 
@@ -215,18 +212,6 @@ func parsePermissions(permissionAttr *hclwrite.Attribute, permissionsType string
 		}
 	}
 
-	/*file, parsedDiags := hclwrite.ParseConfig(tokens.Bytes(), "", hcl.InitialPos)
-
-	if parsedDiags.HasErrors() {
-		log.Fatal("Cannot parse bytes from groupPermission block ", parsedDiags.Error())
-	}
-
-	body := file.Body()
-
-	for _, val := range body.Blocks() {
-		log.Printf("Block %s", string(val.Body().BuildTokens(nil).Bytes()))
-	}*/
-
 	return res, nil
 }
 
@@ -241,7 +226,7 @@ func processKeyToken(currentToken *hclwrite.Token, keyTokens *hclwrite.Tokens) b
 	}
 }
 
-func getValueTokens(valueTokens *hclwrite.Tokens, start int, end int, permissionSetNames map[string]string) ([]string, error) {
+func getValueTokens(valueTokens *hclwrite.Tokens, start int, end int, permissionSetNames *map[string]string) ([]string, error) {
 	values := make([]string, 0)
 
 	if end < start+1 {
@@ -325,19 +310,7 @@ func makeError(key string) (*schema.AccountModule, error) {
 	return nil, schema.ParsingError{Message: fmt.Sprintf("[%s] property not found in aws-account module", key)}
 }
 
-/*type PermissionValueTokensType int
-
-const (
-	Literal         PermissionValueTokensType = 0
-	ModuleReference PermissionValueTokensType = 1
-)
-
-type PermissionValueTokens struct {
-	ValueType PermissionValueTokensType
-	Value     string
-}*/
-
-func toValue(tokens hclwrite.Tokens, permissionSetNames map[string]string) (string, error) {
+func toValue(tokens hclwrite.Tokens, permissionSetNames *map[string]string) (string, error) {
 
 	for index, token := range tokens {
 		if string(token.Bytes) == string('"') {
@@ -350,8 +323,8 @@ func toValue(tokens hclwrite.Tokens, permissionSetNames map[string]string) (stri
 			moduleNameToken := tokens[index+2]
 			moduleName := string(moduleNameToken.Bytes)
 
-			permissionSetName, ok := permissionSetNames[moduleName]
-			if !ok {
+			permissionSetName, found := (*permissionSetNames)[moduleName]
+			if !found {
 				return "", schema.ParsingError{Message: fmt.Sprintf("Cannot find [%s] permission set", moduleName)}
 			}
 			return permissionSetName, nil

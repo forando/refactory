@@ -12,6 +12,9 @@ module "komueb_3873_domain_control" {
   group_permissions = {
     "Cloud Shuttle" = ["AWSAdministratorAccess", "AWSReadOnlyAccess"]
   }
+  user_permissions = {
+    "heiko.rothe@idealo.de" = ["AWSPowerUserAccess"]
+  }
 }
 
 module "komueb_3873_service_catalog_hub" {
@@ -45,7 +48,6 @@ module "komueb_3873_aws_cost_management" {
     "Cloud Shuttle"   = [
       "AWSAdministratorAccess",
       module.controlling_access_permission_set.permission_set_name,
-      module.cost_center_access_permission_set["1187"].permission_set_name
     ],
     "controlling-aws" = [
       module.controlling_access_permission_set.permission_set_name
@@ -62,89 +64,6 @@ module "komueb_3873_aws_cost_management" {
   }
 }
 
-locals {
-  /**
-  * add cost centers that you actually want to assign to a group here step by step. Doing all at once leads to a timeout :/
-  */
-  cost_centers = setintersection([
-    "1181", "1187", "1600", "1602", "1609", "1610", "1645", "1696"
-  ], toset([for row in csvdecode(file("../cost-center.csv")) : row["Cost Center"]]))
-}
-
-#Cost center based access for PAs
-module "cost_center_access_permission_set" {
-  for_each                = local.cost_centers
-  source                  = "../modules/aws-ssoadmin-permission-set"
-  name                    = "CostCenter${each.key}CostReportAccess"
-  ssoadmin_instance_arn   = local.ssoadmin_instance_arn
-  inline_policy_document = data.aws_iam_policy_document.s3_report_access_policy[each.key].json
-}
-
-data "aws_iam_policy_document" "s3_report_access_policy" {
-  for_each = local.cost_centers
-  statement {
-    actions   = [
-      "s3:ListAllMyBuckets", "s3:GetBucketLocation"
-    ]
-    resources = [
-      "*"
-    ]
-  }
-  statement {
-    actions   = [
-      "s3:ListBucket"
-    ]
-    resources = [
-      "arn:aws:s3:::173900957619-cost-reports-by-cost-center"
-    ]
-  }
-  statement {
-    actions   = [
-      "s3:ListBucket"
-    ]
-    resources = [
-      "arn:aws:s3:::173900957619-cost-reports-by-cost-center"
-    ]
-    condition {
-      test     = "StringEquals"
-      variable = "s3:prefix"
-      values   = [
-        "reports/${each.key}/"
-      ]
-    }
-    condition {
-      test     = "StringEquals"
-      variable = "s3:delimiter"
-      values   = [
-        "/"
-      ]
-    }
-  }
-  statement {
-    actions   = [
-      "s3:ListBucket"
-    ]
-    resources = [
-      "arn:aws:s3:::173900957619-cost-reports-by-cost-center"
-    ]
-    condition {
-      test     = "StringEquals"
-      variable = "s3:prefix"
-      values   = [
-        "reports/${each.key}/*"
-      ]
-    }
-  }
-  statement {
-    actions   = [
-      "s3:ListBucket",
-      "s3:GetObject"
-    ]
-    resources = [
-      "arn:aws:s3:::173900957619-cost-reports-by-cost-center/reports/${each.key}/*"
-    ]
-  }
-}
 #All access for controlling
 module "controlling_access_permission_set" {
   source                  = "../modules/aws-ssoadmin-permission-set"

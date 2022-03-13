@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"github.com/cheggaaa/pb/v3"
 	"github.com/forando/refactory/pkg/factory"
 	"github.com/forando/refactory/pkg/filesystem"
 	"github.com/forando/refactory/pkg/parser"
@@ -12,8 +13,8 @@ import (
 )
 
 func main() {
-	inputDirFlag := flag.String("dir", "/Users/andrii.logoshko/Projects/aws-accounts/aws-prod-org", "path to a dir to scan")
-	outputDirFlag := flag.String("out", ".", "path to where to create new dir structure")
+	inputDirFlag := flag.String("dir", "", "path to a dir to scan")
+	outputDirFlag := flag.String("out", "", "path to a dir for the output")
 
 	flag.Parse()
 
@@ -29,22 +30,20 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	bar := pb.StartNew(len(fList))
 	for _, file := range fList {
-		log.Printf("File %s:", file)
 		body := parser.ParseFile(file)
 
 		policyDocuments := parsePolicyDocuments(body, file)
 
 		permissionSetModules, permissionSetNames := parsePermissionSets(body, file, policyDocuments)
-		for _, mod := range *permissionSetModules {
-			log.Printf("%s: [%s]", mod.ProductTicket, mod.PermissionSetName)
-		}
-		log.Println(permissionSetNames)
 
 		accountModules := parseAccounts(body, file, permissionSetNames)
-		log.Println(accountModules)
 		factory.Bootstrap(accountModules, permissionSetModules, *outputDirFlag)
+		bar.Increment()
 	}
+	bar.Finish()
+	log.Println("All Done!!!")
 }
 
 func parsePolicyDocuments(body *hclwrite.Body, file string) *map[string]*hclwrite.Block {

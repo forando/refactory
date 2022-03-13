@@ -15,3 +15,8 @@ existing **.tf** files and generate new ones.
 
 1. Change directory to `cmd/test-runner`
 2. Run `go build`
+
+# Open Questions
+
+1. **depends_on** attribute in aws-account modules
+2. **local.ssoadmin_instance_arn** in aws-ssoadmin-permission-set modules
