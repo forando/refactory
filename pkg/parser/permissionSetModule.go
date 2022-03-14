@@ -6,7 +6,7 @@ import (
 	"github.com/hashicorp/hcl/v2/hclwrite"
 )
 
-func ParsePermissionSetModule(body *hclwrite.Body, policyDocuments *map[string]*hclwrite.Block) (*schema.PermissionSetModule, error) {
+func ParsePermissionSetModule(body *hclwrite.Body, policyDocuments *map[string]*schema.PolicyDocument) (*schema.PermissionSetModule, error) {
 	var module schema.PermissionSetModule
 
 	attr := body.Attributes()
@@ -48,7 +48,7 @@ func ParsePermissionSetModule(body *hclwrite.Body, policyDocuments *map[string]*
 		if !found {
 			return nil, schema.ParsingError{Message: fmt.Sprintf("cannot find [%s] policyDocument", pDocName)}
 		}
-		module.InlinePolicyDocumentsAttr = inlinePolicyDocumentsAttr
+		module.InlinePolicyDocumentAttr = inlinePolicyDocumentsAttr
 		module.PolicyDocument = pDockBlock
 		module.PolicyDocumentName = pDocName
 	}

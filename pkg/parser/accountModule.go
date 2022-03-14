@@ -152,7 +152,7 @@ func ParseAccountModule(body *hclwrite.Body, permissionSetNames *map[string]stri
 	return &module, nil
 }
 
-func parsePermissions(permissionAttr *hclwrite.Attribute, permissionsType string, permissionSetNames *map[string]string) (map[string][]string, error) {
+func parsePermissions(permissionAttr *hclwrite.Attribute, permissionsType string, permissionSetNames *map[string]string) (map[string][]*schema.PermissionSet, error) {
 
 	expr := permissionAttr.Expr()
 	exprTokens := expr.BuildTokens(nil)
@@ -164,7 +164,7 @@ func parsePermissions(permissionAttr *hclwrite.Attribute, permissionsType string
 	}
 	inside := exprTokens[1 : len(exprTokens)-1]
 
-	res := make(map[string][]string)
+	res := make(map[string][]*schema.PermissionSet)
 
 	var tokens hclwrite.Tokens
 	var key string
@@ -226,8 +226,8 @@ func processKeyToken(currentToken *hclwrite.Token, keyTokens *hclwrite.Tokens) b
 	}
 }
 
-func getValueTokens(valueTokens *hclwrite.Tokens, start int, end int, permissionSetNames *map[string]string) ([]string, error) {
-	values := make([]string, 0)
+func getValueTokens(valueTokens *hclwrite.Tokens, start int, end int, permissionSetNames *map[string]string) ([]*schema.PermissionSet, error) {
+	values := make([]*schema.PermissionSet, 0)
 
 	if end < start+1 {
 		return values, nil
@@ -236,7 +236,7 @@ func getValueTokens(valueTokens *hclwrite.Tokens, start int, end int, permission
 	innerTokens := (*valueTokens)[start+1 : end]
 
 	var tokens hclwrite.Tokens
-	var value string
+	var value *schema.PermissionSet
 	var err error
 
 	valueProcessed := false
@@ -310,26 +310,26 @@ func makeError(key string) (*schema.AccountModule, error) {
 	return nil, schema.ParsingError{Message: fmt.Sprintf("[%s] property not found in aws-account module", key)}
 }
 
-func toValue(tokens hclwrite.Tokens, permissionSetNames *map[string]string) (string, error) {
+func toValue(tokens hclwrite.Tokens, permissionSetNames *map[string]string) (*schema.PermissionSet, error) {
 
 	for index, token := range tokens {
 		if string(token.Bytes) == string('"') {
-			return quotedTokensToString(tokens), nil
+			return &schema.PermissionSet{Policy: schema.ManagedPolicy, Val: quotedTokensToString(tokens)}, nil
 		}
 		if string(token.Bytes) == "module" {
 			if len(tokens) < index+3 {
-				return "", schema.ParsingError{Message: fmt.Sprintf("module reference does not have enough tokens, expected %v but actual %v", index+3, len(tokens))}
+				return nil, schema.ParsingError{Message: fmt.Sprintf("module reference does not have enough tokens, expected %v but actual %v", index+3, len(tokens))}
 			}
 			moduleNameToken := tokens[index+2]
 			moduleName := string(moduleNameToken.Bytes)
 
 			permissionSetName, found := (*permissionSetNames)[moduleName]
 			if !found {
-				return "", schema.ParsingError{Message: fmt.Sprintf("Cannot find [%s] permission set", moduleName)}
+				return nil, schema.ParsingError{Message: fmt.Sprintf("Cannot find [%s] permission set", moduleName)}
 			}
-			return permissionSetName, nil
+			return &schema.PermissionSet{Policy: schema.InlinePolicy, Val: permissionSetName}, nil
 		}
 	}
 
-	return "", schema.ParsingError{Message: fmt.Sprintf("tokens don't contain neither quoted strings nor module references")}
+	return nil, schema.ParsingError{Message: fmt.Sprintf("tokens don't contain neither quoted strings nor module references")}
 }

@@ -5,6 +5,18 @@ import (
 	"github.com/hashicorp/hcl/v2/hclwrite"
 )
 
+type PolicyType int
+
+const (
+	ManagedPolicy PolicyType = 0
+	InlinePolicy  PolicyType = 1
+)
+
+type PermissionSet struct {
+	Policy PolicyType
+	Val    string
+}
+
 const (
 	AccName                  string = "name"
 	AccOrganizationalUnit    string = "organizational_unit"
@@ -28,8 +40,8 @@ type AccountModule struct {
 	CostCenter            int
 	OwnerEmail            string
 	OwnerJiraUsername     string
-	GroupPermissions      map[string][]string
-	UserPermissions       map[string][]string
+	GroupPermissions      map[string][]*PermissionSet
+	UserPermissions       map[string][]*PermissionSet
 	PersonalDataProcessed bool
 	PersonalDataStored    bool
 	RootEmail             string
@@ -48,16 +60,16 @@ const (
 )
 
 type PermissionSetModule struct {
-	SourceAttr                *hclwrite.Attribute
-	SsoAdminInstanceArnAttr   *hclwrite.Attribute
-	PermissionSetName         string
-	NameAttr                  *hclwrite.Attribute
-	InlinePolicyDocumentsAttr *hclwrite.Attribute
-	PolicyDocumentName        string
-	PolicyDocument            *hclwrite.Block
-	ManagedPolicyArnsAttr     *hclwrite.Attribute
-	TagsAttr                  *hclwrite.Attribute
-	ProductTicket             string
+	SourceAttr               *hclwrite.Attribute
+	SsoAdminInstanceArnAttr  *hclwrite.Attribute
+	PermissionSetName        string
+	NameAttr                 *hclwrite.Attribute
+	InlinePolicyDocumentAttr *hclwrite.Attribute
+	PolicyDocumentName       string
+	PolicyDocument           *PolicyDocument
+	ManagedPolicyArnsAttr    *hclwrite.Attribute
+	TagsAttr                 *hclwrite.Attribute
+	ProductTicket            string
 }
 
 type PermissionSetModules []*PermissionSetModule

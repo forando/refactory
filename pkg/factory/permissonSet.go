@@ -38,17 +38,18 @@ func BootstrapPermissionSetTerragrunt(fileName string, module *schema.Permission
 		inputsBody.AppendUnstructuredTokens(module.ManagedPolicyArnsAttr.BuildTokens(nil))
 	}
 
-	if module.InlinePolicyDocumentsAttr != nil {
-		inputsBody.AppendUnstructuredTokens(module.InlinePolicyDocumentsAttr.BuildTokens(nil))
+	if module.InlinePolicyDocumentAttr != nil {
+		inputsBody.AppendUnstructuredTokens(hclwrite.Tokens{
+			{Type: hclsyntax.TokenStringLit, Bytes: []byte("# language=JSON")},
+			{Type: hclsyntax.TokenNewline, Bytes: []byte("\n")},
+		})
+		inputsBody.SetAttributeRaw(schema.PsInlinePolicyDocument, *buildInlinePolicyTokens(module.PolicyDocument))
+		//inputsBody.AppendUnstructuredTokens(*buildInlinePolicyTokens(module.PolicyDocument))
 	}
 
 	if module.TagsAttr != nil {
 		inputsBody.AppendUnstructuredTokens(module.TagsAttr.BuildTokens(nil))
 	}
-
-	rootBody.AppendNewline()
-
-	rootBody.AppendBlock(module.PolicyDocument)
 
 	if _, err := newFile.WriteTo(fw); err != nil {
 		log.Fatal("Cannot write to the new file ", err)

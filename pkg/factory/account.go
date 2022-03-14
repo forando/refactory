@@ -8,6 +8,7 @@ import (
 	"github.com/zclconf/go-cty/cty"
 	"log"
 	"os"
+	"path"
 )
 
 func BootstrapAccountTerragrunt(fileName string, module *schema.AccountModule) {
@@ -20,6 +21,18 @@ func BootstrapAccountTerragrunt(fileName string, module *schema.AccountModule) {
 	newFile := hclwrite.NewEmptyFile()
 	rootBody := newFile.Body()
 
+	buildIncludeRoot(rootBody)
+
+	buildDependencies(rootBody, module)
+
+	buildInputs(rootBody, module)
+
+	if _, err := newFile.WriteTo(fw); err != nil {
+		log.Fatal("Cannot write to the new file ", err)
+	}
+}
+
+func buildIncludeRoot(rootBody *hclwrite.Body) {
 	includeBlock := rootBody.AppendNewBlock("include", []string{"root"})
 	includeBody := includeBlock.Body()
 
@@ -30,6 +43,38 @@ func BootstrapAccountTerragrunt(fileName string, module *schema.AccountModule) {
 	includeBody.SetAttributeRaw("path", tokens)
 
 	rootBody.AppendNewline()
+}
+
+func buildDependencies(rootBody *hclwrite.Body, module *schema.AccountModule) {
+	permissionSets := make(map[string]bool)
+	for _, val := range module.GroupPermissions {
+		for _, perm := range val {
+			if perm.Policy == schema.InlinePolicy {
+				permissionSets[perm.Val] = true
+			}
+		}
+	}
+	for _, val := range module.UserPermissions {
+		for _, perm := range val {
+			if perm.Policy == schema.InlinePolicy {
+				permissionSets[perm.Val] = true
+			}
+		}
+	}
+	if len(permissionSets) > 0 {
+		dependenciesBody := rootBody.AppendNewBlock("dependencies", nil).Body()
+		perms := make([]cty.Value, 0)
+		for perm, _ := range permissionSets {
+			pathToModule := path.Join("..", "PermissionSets", perm)
+			perms = append(perms, cty.StringVal(pathToModule))
+		}
+		dependenciesBody.SetAttributeValue("paths", cty.ListVal(perms))
+
+		rootBody.AppendNewline()
+	}
+}
+
+func buildInputs(rootBody *hclwrite.Body, module *schema.AccountModule) {
 
 	inputsBody := rootBody.AppendNewBlock("inputs =", nil).Body()
 
@@ -46,8 +91,8 @@ func BootstrapAccountTerragrunt(fileName string, module *schema.AccountModule) {
 		groupPermissionsBody := inputsBody.AppendNewBlock(fmt.Sprintf("%s =", schema.AccGroupPermissions), nil).Body()
 		for key, vals := range module.GroupPermissions {
 			ctyVals := make([]cty.Value, 0)
-			for _, val := range vals {
-				ctyVals = append(ctyVals, cty.StringVal(val))
+			for _, perm := range vals {
+				ctyVals = append(ctyVals, cty.StringVal(perm.Val))
 			}
 			key = fmt.Sprintf("%q", key)
 			groupPermissionsBody.SetAttributeValue(key, cty.ListVal(ctyVals))
@@ -59,8 +104,8 @@ func BootstrapAccountTerragrunt(fileName string, module *schema.AccountModule) {
 		userPermissionsBody := inputsBody.AppendNewBlock(fmt.Sprintf("%s =", schema.AccUserPermissions), nil).Body()
 		for key, vals := range module.UserPermissions {
 			ctyVals := make([]cty.Value, 0)
-			for _, val := range vals {
-				ctyVals = append(ctyVals, cty.StringVal(val))
+			for _, perm := range vals {
+				ctyVals = append(ctyVals, cty.StringVal(perm.Val))
 			}
 			key = fmt.Sprintf("%q", key)
 			userPermissionsBody.SetAttributeValue(key, cty.ListVal(ctyVals))
@@ -85,9 +130,5 @@ func BootstrapAccountTerragrunt(fileName string, module *schema.AccountModule) {
 
 	if len(module.AccountBudgetEmail) > 0 {
 		inputsBody.SetAttributeValue(schema.AccAccountBudgetEmail, cty.StringVal(module.AccountBudgetEmail))
-	}
-
-	if _, err := newFile.WriteTo(fw); err != nil {
-		log.Fatal("Cannot write to the new file ", err)
 	}
 }

@@ -46,21 +46,25 @@ func main() {
 	log.Println("All Done!!!")
 }
 
-func parsePolicyDocuments(body *hclwrite.Body, file string) *map[string]*hclwrite.Block {
-	documents := make(map[string]*hclwrite.Block)
+func parsePolicyDocuments(body *hclwrite.Body, file string) *map[string]*schema.PolicyDocument {
+	documents := make(map[string]*schema.PolicyDocument)
 	for _, block := range body.Blocks() {
 		blockMetaData, err := parser.ParseBlockType(block)
 		if err != nil {
 			log.Fatalf("File %s: %s", file, err)
 		}
 		if blockMetaData.BlockType == schema.IamPolicyDocumentType {
-			documents[blockMetaData.BlockName] = block
+			document, err := parser.ParsePolicyDocumentBlock(block.Body().BuildTokens(nil).Bytes())
+			if err != nil {
+				log.Fatalf("Cannot parse policyDocument %s: %s", blockMetaData.BlockName, err)
+			}
+			documents[blockMetaData.BlockName] = document
 		}
 	}
 	return &documents
 }
 
-func parsePermissionSets(body *hclwrite.Body, file string, policyDocuments *map[string]*hclwrite.Block) (*schema.PermissionSetModules, *map[string]string) {
+func parsePermissionSets(body *hclwrite.Body, file string, policyDocuments *map[string]*schema.PolicyDocument) (*schema.PermissionSetModules, *map[string]string) {
 	fileTokens := strings.Split(file, "/")
 	fileTokens = strings.Split(fileTokens[len(fileTokens)-1], ".")
 	productTicket := fileTokens[0]

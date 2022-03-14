@@ -11,6 +11,88 @@ import (
 	"strings"
 )
 
+const exampleConfig = `
+statement {
+sid = "AthenaQueryExecAccess"
+actions   = [
+  "athena:GetWorkGroup",
+  "athena:GetQueryExecution",
+  "athena:GetQueryResultsStream",
+  "athena:GetQueryResults",
+  "athena:ListQueryExecutions",
+  "athena:ListNamedQueries",
+  "athena:CreateNamedQuery",
+  "athena:StartQueryExecution",
+  "athena:StopQueryExecution"
+]
+resources = [
+  "arn:aws:athena:eu-central-1:173900957619:workgroup/primary"
+]
+}
+statement {
+sid = "GlueReadAccess"
+actions   = [
+  "glue:GetDatabase",
+  "glue:GetDatabases",
+  "glue:GetTable",
+  "glue:GetTables",
+  "glue:GetPartition",
+  "glue:GetPartitions"
+]
+resources = [
+  "arn:aws:glue:eu-central-1:173900957619:catalog",
+  "arn:aws:glue:eu-central-1:173900957619:database/athenacurcfn_general_cost_and_usage_report_idealo_prod",
+  "arn:aws:glue:eu-central-1:173900957619:table/athenacurcfn_general_cost_and_usage_report_idealo_prod/cost_and_usage_data_status",
+  "arn:aws:glue:eu-central-1:173900957619:table/athenacurcfn_general_cost_and_usage_report_idealo_prod/general_cost_and_usage_report_idealo_prod"
+]
+}
+statement {
+sid = "S3DataSourceReadAccess"
+actions   = [
+  "s3:ListBucket",
+  "s3:GetObject"
+]
+resources = [
+  "arn:aws:s3:::957502001809-general-cost-and-usage-reports",
+  "arn:aws:s3:::957502001809-general-cost-and-usage-reports/*"
+]
+}
+statement {
+sid = "S3QueryResultsStorageAccess"
+actions   = [
+  "s3:ListBucket",
+  "s3:GetBucketLocation",
+  "s3:GetObject",
+  "s3:PutObject",
+]
+resources = [
+  "arn:aws:s3:::173900957619-athena-query-results",
+  "arn:aws:s3:::173900957619-athena-query-results/*"
+]
+}
+statement {
+sid = "S3CostReportsAccess"
+actions   = [
+  "s3:ListBucket",
+  "s3:GetObject"
+]
+resources = [
+  "arn:aws:s3:::173900957619-cost-reports-for-controlling/*",
+  "arn:aws:s3:::173900957619-cost-reports-for-controlling",
+  "arn:aws:s3:::173900957619-cost-reports-by-cost-center/*",
+  "arn:aws:s3:::173900957619-cost-reports-by-cost-center"
+]
+}
+statement {
+actions   = [
+  "s3:ListAllMyBuckets"
+]
+resources = [
+  "*"
+]
+}
+`
+
 func main() {
 	inputDirFlag := flag.String("dir", "/Users/andrii.logoshko/Projects/aws-accounts/aws-prod-org", "path to a dir to scan")
 	outputDirFlag := flag.String("out", ".", "path to where to create new dir structure")
@@ -37,7 +119,7 @@ func main() {
 
 		permissionSetModules, permissionSetNames := parsePermissionSets(body, file, policyDocuments)
 		for _, mod := range *permissionSetModules {
-			log.Printf("%s: [%s]", mod.ProductTicket, mod.PermissionSetName)
+			log.Printf("%s: PermissionSetName: %s; PolicyDocName: %s", mod.ProductTicket, mod.PermissionSetName, mod.PolicyDocumentName)
 		}
 		log.Println(permissionSetNames)
 
@@ -47,21 +129,25 @@ func main() {
 	}
 }
 
-func parsePolicyDocuments(body *hclwrite.Body, file string) *map[string]*hclwrite.Block {
-	documents := make(map[string]*hclwrite.Block)
+func parsePolicyDocuments(body *hclwrite.Body, file string) *map[string]*schema.PolicyDocument {
+	documents := make(map[string]*schema.PolicyDocument)
 	for _, block := range body.Blocks() {
 		blockMetaData, err := parser.ParseBlockType(block)
 		if err != nil {
 			log.Fatalf("File %s: %s", file, err)
 		}
 		if blockMetaData.BlockType == schema.IamPolicyDocumentType {
-			documents[blockMetaData.BlockName] = block
+			document, err := parser.ParsePolicyDocumentBlock(block.Body().BuildTokens(nil).Bytes())
+			if err != nil {
+				log.Fatalf("Cannot parse policyDocument %s: %s", blockMetaData.BlockName, err)
+			}
+			documents[blockMetaData.BlockName] = document
 		}
 	}
 	return &documents
 }
 
-func parsePermissionSets(body *hclwrite.Body, file string, policyDocuments *map[string]*hclwrite.Block) (*schema.PermissionSetModules, *map[string]string) {
+func parsePermissionSets(body *hclwrite.Body, file string, policyDocuments *map[string]*schema.PolicyDocument) (*schema.PermissionSetModules, *map[string]string) {
 	fileTokens := strings.Split(file, "/")
 	fileTokens = strings.Split(fileTokens[len(fileTokens)-1], ".")
 	productTicket := fileTokens[0]

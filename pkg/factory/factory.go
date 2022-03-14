@@ -12,10 +12,16 @@ func Bootstrap(accountModules *schema.AccountModules, pSetModules *schema.Permis
 	const terragruntFileNme = "terragrunt.hcl"
 	fs := filesystem.NewOsFs()
 	for _, module := range *accountModules {
-		dirPath := filepath.Join(output, module.ProductTicket, module.AccountName)
+		dirPath := filepath.Join(output, module.ProductTicket)
 		fs.MakeDirs(dirPath)
 
 		filePath := filepath.Join(dirPath, terragruntFileNme)
+		BootstrapRootTerragrunt(filePath)
+
+		dirPath = filepath.Join(dirPath, module.AccountName)
+		fs.MakeDirs(dirPath)
+
+		filePath = filepath.Join(dirPath, terragruntFileNme)
 		BootstrapAccountTerragrunt(filePath, module)
 	}
 	for _, module := range *pSetModules {

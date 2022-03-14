@@ -11,9 +11,7 @@ existing **.tf** files and generate new ones.
 
 ## Local
 
-### Dev Build
-
-1. Change directory to `cmd/test-runner`
+1. Change directory to `cmd/refactory`
 2. Run `go build`
 
 # Open Questions
