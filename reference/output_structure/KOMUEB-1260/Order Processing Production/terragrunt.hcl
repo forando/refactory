@@ -2,6 +2,10 @@ include "root" {
   path = find_in_parent_folders()
 }
 
+dependencies {
+  paths = ["../PermissionSets/OfferpageTeamExternalDevROAccess"]
+}
+
 inputs = {
   name                  = "Order Processing Production"
   organizational_unit   = "Workloads_Prod"
@@ -12,7 +16,7 @@ inputs = {
   owner_jira_username = "stefan.rudnitzki"
 
   group_permissions = {
-    "pt-after_sales-oncall" = ["AWSAdministratorAccess", "AWSReadOnlyAccess"]
+    "pt-after_sales-oncall" = ["AWSAdministratorAccess", "AWSReadOnlyAccess", "OfferpageTeamExternalDevROAccess"]
   }
 
   user_permissions = {

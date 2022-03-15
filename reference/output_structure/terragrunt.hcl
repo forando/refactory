@@ -14,7 +14,7 @@ remote_state {
 }
 
 terraform {
-  source = "${get_path_to_repo_root()}//modules/aws-account"
+  source = regexall(".*/PermissionSets/.*", get_original_terragrunt_dir()) ? "${get_path_to_repo_root()}//modules/aws-ssoadmin-permission-set" : "${get_path_to_repo_root()}//modules/aws-account"
 }
 
 generate "provider" {
