@@ -75,6 +75,7 @@ module "controlling_access_permission_set" {
 data "aws_iam_policy_document" "cost_controlling_access_policy" {
   statement {
     sid = "AthenaQueryExecAccess"
+    effect = "Deny"
     actions   = [
       "athena:GetWorkGroup",
       "athena:GetQueryExecution",

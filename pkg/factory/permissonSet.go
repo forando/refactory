@@ -4,9 +4,13 @@ import (
 	"github.com/forando/refactory/pkg/schema"
 	"github.com/hashicorp/hcl/v2/hclsyntax"
 	"github.com/hashicorp/hcl/v2/hclwrite"
+	"github.com/zclconf/go-cty/cty"
 	"log"
 	"os"
 )
+
+const ssoAdminInstanceArnProd = "arn:aws:sso:::instance/ssoins-69873834cda94459"
+const ssoAdminInstanceArnTest = "arn:aws:sso:::instance/ssoins-69877a64b4162b02"
 
 func BootstrapPermissionSetTerragrunt(fileName string, module *schema.PermissionSetModule) {
 	fw, osErr := os.Create(fileName)
@@ -32,7 +36,8 @@ func BootstrapPermissionSetTerragrunt(fileName string, module *schema.Permission
 	inputsBody := rootBody.AppendNewBlock("inputs =", nil).Body()
 
 	inputsBody.AppendUnstructuredTokens(module.NameAttr.BuildTokens(nil))
-	inputsBody.AppendUnstructuredTokens(module.SsoAdminInstanceArnAttr.BuildTokens(nil))
+	//inputsBody.AppendUnstructuredTokens(module.SsoAdminInstanceArnAttr.BuildTokens(nil))
+	inputsBody.SetAttributeValue(schema.PsSsoAdminInstanceArn, cty.StringVal(ssoAdminInstanceArnProd))
 
 	if module.ManagedPolicyArnsAttr != nil {
 		inputsBody.AppendUnstructuredTokens(module.ManagedPolicyArnsAttr.BuildTokens(nil))
