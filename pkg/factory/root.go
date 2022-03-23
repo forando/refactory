@@ -1,6 +1,7 @@
 package factory
 
 import (
+	"github.com/forando/refactory/pkg/schema"
 	"github.com/hashicorp/hcl/v2/hclsyntax"
 	"github.com/hashicorp/hcl/v2/hclwrite"
 	"github.com/zclconf/go-cty/cty"
@@ -8,7 +9,7 @@ import (
 	"os"
 )
 
-func BootstrapRootTerragrunt(filePath string) {
+func BootstrapRootTerragrunt(filePath string, org schema.Org) {
 	fw, osErr := os.Create(filePath)
 
 	if osErr != nil {
@@ -18,16 +19,16 @@ func BootstrapRootTerragrunt(filePath string) {
 	newFile := hclwrite.NewEmptyFile()
 	rootBody := newFile.Body()
 
-	buildRemoteState(rootBody)
+	buildRemoteState(rootBody, org)
 	buildTerraformBlock(rootBody)
-	buildGenerateBlock(rootBody)
+	buildGenerateBlock(rootBody, org)
 
 	if _, err := newFile.WriteTo(fw); err != nil {
 		log.Fatal("Cannot write to the new file ", err)
 	}
 }
 
-func buildRemoteState(body *hclwrite.Body) {
+func buildRemoteState(body *hclwrite.Body, org schema.Org) {
 	remoteStateBlock := body.AppendNewBlock("remote_state", nil)
 	remoteStateBody := remoteStateBlock.Body()
 
@@ -37,7 +38,11 @@ func buildRemoteState(body *hclwrite.Body) {
 	generateBody.SetAttributeValue("path", cty.StringVal("backend.tf"))
 	generateBody.SetAttributeValue("if_exists", cty.StringVal("overwrite"))
 	configBody := remoteStateBody.AppendNewBlock("config =", nil).Body()
-	configBody.SetAttributeValue("bucket", cty.StringVal("idealo-test-org-tg-state"))
+	if org == schema.ProdOrg {
+		configBody.SetAttributeValue("bucket", cty.StringVal("idealo-prod-org-tg-state"))
+	} else {
+		configBody.SetAttributeValue("bucket", cty.StringVal("idealo-test-org-tg-state"))
+	}
 	configBody.SetAttributeRaw("key", hclwrite.Tokens{
 		{Type: hclsyntax.TokenOQuote, Bytes: []byte{'"'}},
 		{Type: hclsyntax.TokenStringLit, Bytes: []byte("${path_relative_to_include()}/terraform.tfstate")},
@@ -46,7 +51,11 @@ func buildRemoteState(body *hclwrite.Body) {
 	//configBody.SetAttributeValue("key", cty.StringVal("${path_relative_to_include()}/terraform.tfstate"))
 	configBody.SetAttributeValue("region", cty.StringVal("eu-central-1"))
 	configBody.SetAttributeValue("encrypt", cty.BoolVal(true))
-	configBody.SetAttributeValue("dynamodb_table", cty.StringVal("idealo-test-org-tg-lock"))
+	if org == schema.ProdOrg {
+		configBody.SetAttributeValue("dynamodb_table", cty.StringVal("idealo-prod-org-tg-lock"))
+	} else {
+		configBody.SetAttributeValue("dynamodb_table", cty.StringVal("idealo-test-org-tg-lock"))
+	}
 }
 
 func buildTerraformBlock(body *hclwrite.Body) {
@@ -55,12 +64,12 @@ func buildTerraformBlock(body *hclwrite.Body) {
 	terraformBlock := body.AppendNewBlock("terraform", nil)
 	terraformBody := terraformBlock.Body()
 	terraformBody.SetAttributeRaw("source", hclwrite.Tokens{
-		{Type: hclsyntax.TokenStringLit, Bytes: []byte(" regexall(")},
+		{Type: hclsyntax.TokenStringLit, Bytes: []byte(" length(regexall(")},
 		{Type: hclsyntax.TokenOQuote, Bytes: []byte{'"'}},
 		{Type: hclsyntax.TokenStringLit, Bytes: []byte(".*/PermissionSets/.*")},
 		{Type: hclsyntax.TokenCQuote, Bytes: []byte{'"'}},
 		{Type: hclsyntax.TokenComma, Bytes: []byte{','}},
-		{Type: hclsyntax.TokenStringLit, Bytes: []byte("get_original_terragrunt_dir()) ? ")},
+		{Type: hclsyntax.TokenStringLit, Bytes: []byte("get_original_terragrunt_dir())) > 0 ? ")},
 		{Type: hclsyntax.TokenOQuote, Bytes: []byte{'"'}},
 		{Type: hclsyntax.TokenStringLit, Bytes: []byte("${get_path_to_repo_root()}//modules/aws-ssoadmin-permission-set")},
 		{Type: hclsyntax.TokenCQuote, Bytes: []byte{'"'}},
@@ -71,7 +80,7 @@ func buildTerraformBlock(body *hclwrite.Body) {
 	})
 }
 
-func buildGenerateBlock(body *hclwrite.Body) {
+func buildGenerateBlock(body *hclwrite.Body, org schema.Org) {
 	body.AppendNewline()
 
 	generateBlock := body.AppendNewBlock("generate", []string{"provider"})
@@ -83,8 +92,11 @@ func buildGenerateBlock(body *hclwrite.Body) {
 	providerAwsBlock := hclwrite.NewBlock("provider", []string{"aws"})
 	providerAwsBody := providerAwsBlock.Body()
 	providerAwsBody.SetAttributeValue("region", cty.StringVal("eu-central-1"))
-	providerAwsBody.SetAttributeValue("allowed_account_ids", cty.ListVal([]cty.Value{cty.StringVal("573275350257")}))
-
+	if org == schema.ProdOrg {
+		providerAwsBody.SetAttributeValue("allowed_account_ids", cty.ListVal([]cty.Value{cty.StringVal("957502001809")}))
+	} else {
+		providerAwsBody.SetAttributeValue("allowed_account_ids", cty.ListVal([]cty.Value{cty.StringVal("573275350257")}))
+	}
 	providerControlTowerBlock := hclwrite.NewBlock("provider", []string{"controltower"})
 	providerControlTowerBody := providerControlTowerBlock.Body()
 	providerControlTowerBody.SetAttributeValue("region", cty.StringVal("eu-central-1"))

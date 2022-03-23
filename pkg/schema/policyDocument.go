@@ -15,3 +15,10 @@ const (
 	EffectAllow string = "Allow"
 	EffectDeny  string = "Deny"
 )
+
+type PolicyType int
+
+const (
+	ManagedPolicy PolicyType = 0
+	InlinePolicy  PolicyType = 1
+)

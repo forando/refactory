@@ -12,7 +12,7 @@ import (
 const ssoAdminInstanceArnProd = "arn:aws:sso:::instance/ssoins-69873834cda94459"
 const ssoAdminInstanceArnTest = "arn:aws:sso:::instance/ssoins-69877a64b4162b02"
 
-func BootstrapPermissionSetTerragrunt(fileName string, module *schema.PermissionSetModule) {
+func BootstrapPermissionSetTerragrunt(fileName string, module *schema.PermissionSetModule, org schema.Org) {
 	fw, osErr := os.Create(fileName)
 
 	if osErr != nil {
@@ -36,8 +36,12 @@ func BootstrapPermissionSetTerragrunt(fileName string, module *schema.Permission
 	inputsBody := rootBody.AppendNewBlock("inputs =", nil).Body()
 
 	inputsBody.AppendUnstructuredTokens(module.NameAttr.BuildTokens(nil))
-	//inputsBody.AppendUnstructuredTokens(module.SsoAdminInstanceArnAttr.BuildTokens(nil))
-	inputsBody.SetAttributeValue(schema.PsSsoAdminInstanceArn, cty.StringVal(ssoAdminInstanceArnProd))
+
+	if org == schema.ProdOrg {
+		inputsBody.SetAttributeValue(schema.PsSsoAdminInstanceArn, cty.StringVal(ssoAdminInstanceArnProd))
+	} else {
+		inputsBody.SetAttributeValue(schema.PsSsoAdminInstanceArn, cty.StringVal(ssoAdminInstanceArnTest))
+	}
 
 	if module.ManagedPolicyArnsAttr != nil {
 		inputsBody.AppendUnstructuredTokens(module.ManagedPolicyArnsAttr.BuildTokens(nil))
@@ -49,7 +53,6 @@ func BootstrapPermissionSetTerragrunt(fileName string, module *schema.Permission
 			{Type: hclsyntax.TokenNewline, Bytes: []byte("\n")},
 		})
 		inputsBody.SetAttributeRaw(schema.PsInlinePolicyDocument, *buildInlinePolicyTokens(module.PolicyDocument))
-		//inputsBody.AppendUnstructuredTokens(*buildInlinePolicyTokens(module.PolicyDocument))
 	}
 
 	if module.TagsAttr != nil {

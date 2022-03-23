@@ -47,9 +47,7 @@ func buildPolicyStatement(statement *schema.Statement, lastItem bool) *hclwrite.
 		{Type: hclsyntax.TokenOBrace, Bytes: []byte{'{'}},
 		{Type: hclsyntax.TokenNewline, Bytes: []byte("\n")},
 	}
-	if len(statement.Sid) > 0 {
-		tokens = append(tokens, *buildPolicySid(statement.Sid)...)
-	}
+	tokens = append(tokens, *buildPolicySid(statement.Sid)...)
 	tokens = append(tokens, *buildPolicyEffect(statement.Effect)...)
 	tokens = append(tokens, *buildPolicyAction(statement.Actions)...)
 	tokens = append(tokens, *buildPolicyResource(statement.Resources)...)

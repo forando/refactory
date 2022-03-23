@@ -2,7 +2,6 @@ package filesystem
 
 import (
 	"fmt"
-	"github.com/hashicorp/hcl/v2"
 	"io/ioutil"
 	"log"
 	"os"
@@ -14,9 +13,12 @@ import (
 // See io/fs.FS in http://golang.org/s/draft-iofs-design
 type FS interface {
 	Open(name string) (File, error)
+	RemoveDir(name string) error
+	RemoveFile(name string) error
 	ReadFile(name string) ([]byte, error)
 	ReadDir(dirname string) ([]os.FileInfo, error)
 	MakeDirs(name string)
+	ListDirs(string) ([]string, error)
 	Exists(name string) (bool, error)
 }
 
@@ -34,7 +36,16 @@ func (fs *osFs) Open(name string) (File, error) {
 	return os.Open(name)
 }
 
+func (fs *osFs) RemoveDir(name string) error {
+	return os.RemoveAll(name)
+}
+
+func (fs *osFs) RemoveFile(name string) error {
+	return os.Remove(name)
+}
+
 func (fs *osFs) ReadFile(name string) ([]byte, error) {
+	//TODO: potential cause for `too many open files` error
 	return ioutil.ReadFile(name)
 }
 
@@ -42,26 +53,36 @@ func (fs *osFs) ReadDir(dirname string) ([]os.FileInfo, error) {
 	return ioutil.ReadDir(dirname)
 }
 
-// NewOsFs provides a basic implementation of FS for an OS filesystem
+func (fs *osFs) ListDirs(dir string) (dirs []string, err error) {
+	infos, err := fs.ReadDir(dir)
+	if err != nil {
+		return
+	}
+
+	for _, info := range infos {
+		if !info.IsDir() {
+			continue
+		}
+		path := filepath.Join(dir, info.Name())
+		dirs = append(dirs, path)
+	}
+	return
+}
+
 func NewOsFs() FS {
 	return &osFs{}
 }
 
-func DirFiles(fs FS, dir string) (primary []string, diags hcl.Diagnostics) {
+func DirFiles(fs FS, dir string) (primary []string, err error) {
 	infos, err := fs.ReadDir(dir)
 	if err != nil {
-		diags = append(diags, &hcl.Diagnostic{
-			Severity: hcl.DiagError,
-			Summary:  "Failed to read module directory",
-			Detail:   fmt.Sprintf("Module directory %s does not exist or cannot be read.", dir),
-		})
+		err = FsError{Message: fmt.Sprintf("Directory %s does not exist or cannot be read.", dir)}
 		return
 	}
 
 	var override []string
 	for _, info := range infos {
 		if info.IsDir() {
-			// We only care about files
 			continue
 		}
 
@@ -89,26 +110,6 @@ func DirFiles(fs FS, dir string) (primary []string, diags hcl.Diagnostics) {
 	return
 }
 
-// fileExt returns the Terraform configuration extension of the given
-// path, or a blank string if it is not a recognized extension.
-func fileExt(path string) string {
-	if strings.HasSuffix(path, ".tf") {
-		return ".tf"
-	} else if strings.HasSuffix(path, ".tf.json") {
-		return ".tf.json"
-	} else {
-		return ""
-	}
-}
-
-// isIgnoredFile returns true if the given filename (which must not have a
-// directory path ahead of it) should be ignored as e.g. an editor swap file.
-func isIgnoredFile(name string) bool {
-	return strings.HasPrefix(name, ".") || // Unix-like hidden files
-		strings.HasSuffix(name, "~") || // vim
-		strings.HasPrefix(name, "#") && strings.HasSuffix(name, "#") // emacs
-}
-
 func (fs *osFs) MakeDirs(name string) {
 	err := os.MkdirAll(name, 0755)
 	if err != nil {
@@ -125,6 +126,22 @@ func (fs *osFs) Exists(path string) (bool, error) {
 		return false, nil
 	}
 	return false, err
+}
+
+func fileExt(path string) string {
+	if strings.HasSuffix(path, ".tf") {
+		return ".tf"
+	} else if strings.HasSuffix(path, ".tf.json") {
+		return ".tf.json"
+	} else {
+		return ""
+	}
+}
+
+func isIgnoredFile(name string) bool {
+	return strings.HasPrefix(name, ".") || // Unix-like hidden files
+		strings.HasSuffix(name, "~") || // vim
+		strings.HasPrefix(name, "#") && strings.HasSuffix(name, "#") // emacs
 }
 
 func PrintPWD() {

@@ -12,9 +12,6 @@ module "komueb_3873_domain_control" {
   group_permissions = {
     "Cloud Shuttle" = ["AWSAdministratorAccess", "AWSReadOnlyAccess"]
   }
-  user_permissions = {
-    "heiko.rothe@idealo.de" = ["AWSPowerUserAccess"]
-  }
 }
 
 module "komueb_3873_service_catalog_hub" {
@@ -75,7 +72,6 @@ module "controlling_access_permission_set" {
 data "aws_iam_policy_document" "cost_controlling_access_policy" {
   statement {
     sid = "AthenaQueryExecAccess"
-    effect = "Deny"
     actions   = [
       "athena:GetWorkGroup",
       "athena:GetQueryExecution",

@@ -3,7 +3,10 @@ include "root" {
 }
 
 dependencies {
-  paths = ["../PermissionSets/OfferpageTeamExternalDevROAccess"]
+  paths = [
+    "../PermissionSets/ExtendedReadOnlyAccess",
+    "../PermissionSets/OrderEmployeeReportFilesAccess"
+  ]
 }
 
 inputs = {
@@ -16,10 +19,10 @@ inputs = {
   owner_jira_username = "stefan.rudnitzki"
 
   group_permissions = {
-    "pt-after_sales-oncall" = ["AWSAdministratorAccess", "AWSReadOnlyAccess", "OfferpageTeamExternalDevROAccess"]
+    "pt-after_sales-oncall"           = ["AWSAdministratorAccess"]
+    "pt-after_sales-order-processing" = ["ExtendedReadOnlyAccess"]
+    "pt-order_employee_report-files"  = ["OrderEmployeeReportFilesAccess"]
   }
-
-  user_permissions = {
-    "marcus.janke@idealo.de" = ["ExtendedReadOnlyAccess"]
-  }
+  personal_data_processed = true
+  personal_data_stored    = true
 }

@@ -1,0 +1,195 @@
+Terraform used the selected providers to generate the following execution
+plan. Resource actions are indicated with the following symbols:
+  + create
+  ~ update in-place
+-/+ destroy and then create replacement
+
+Terraform will perform the following actions:
+
+  # aws_s3_bucket_object.metadata will be updated in-place
+  ~ resource "aws_s3_bucket_object" "metadata" {
+      + acl                    = "private"
+      + content                = jsonencode(
+            {
+              + budget       = 200
+              + budget_email = "aws.cloud-shuttle-sandbox@idealo.de"
+              + domain       = "cloud-shuttle-sandbox.aws.idealo.cloud"
+              + email        = "aws.cloud-shuttle-sandbox@idealo.de"
+              + slug         = "cloud-shuttle-sandbox"
+            }
+        )
+      + force_destroy          = false
+        id                     = "340877201453.json"
+        tags                   = {}
+      + version_id             = (known after apply)
+        # (9 unchanged attributes hidden)
+    }
+
+  # controltower_aws_account.account will be updated in-place
+  ~ resource "controltower_aws_account" "account" {
+        id                       = "pp-2dmjx3doixfyu"
+        name                     = "cloud-shuttle-sandbox"
+        tags                     = {
+            "idealo:cost-center"       = "1187"
+            "idealo:external-pii-data" = "false"
+            "idealo:product-komueb"    = "KOMUEB-3188"
+        }
+        # (5 unchanged attributes hidden)
+
+      ~ sso {
+          + first_name = "Azure"
+          + last_name  = "AD"
+            # (1 unchanged attribute hidden)
+        }
+    }
+
+  # jira_issue.cloud_security_audit_subtask will be updated in-place
+  ~ resource "jira_issue" "cloud_security_audit_subtask" {
+        id               = "433722"
+      + state_transition = "11"
+        # (8 unchanged attributes hidden)
+    }
+
+  # jira_issue.komueb will be updated in-place
+  ~ resource "jira_issue" "komueb" {
+      + fields           = {
+          + "customfield_14332" = jsonencode(
+                {
+                  + name = "m.brettschneider"
+                }
+            )
+          + "customfield_15806" = "aws.cloud-shuttle-sandbox@idealo.de"
+          + "customfield_17702" = <<-EOT
+                ||User/Group||Permissions||
+                |Cloud Shuttle|AWSAdministratorAccess, AWSReadOnlyAccess|
+            EOT
+          + "customfield_18206" = jsonencode(
+                [
+                  + {
+                      + value = "NEIN"
+                    },
+                ]
+            )
+          + "customfield_18207" = jsonencode(
+                [
+                  + {
+                      + value = "NEIN"
+                    },
+                ]
+            )
+          + "customfield_18233" = "\"340877201453\""
+        }
+        id               = "433721"
+      + state_transition = "71"
+        # (7 unchanged attributes hidden)
+    }
+
+  # null_resource.root_email is tainted, so must be replaced
+-/+ resource "null_resource" "root_email" {
+      ~ id       = "2545085413066337751" -> (known after apply)
+        # (1 unchanged attribute hidden)
+    }
+
+  # null_resource.send_email will be created
+  + resource "null_resource" "send_email" {
+      + id = (known after apply)
+    }
+
+Plan: 2 to add, 4 to change, 1 to destroy.
+
+===================================
+
+Terraform will perform the following actions:
+
+  # aws_s3_bucket_object.metadata will be updated in-place
+  ~ resource "aws_s3_bucket_object" "metadata" {
+      + acl                    = "private"
+      + content                = jsonencode(
+            {
+              + budget       = 200
+              + budget_email = "aws.cloud-shuttle-sandbox@idealo.de"
+              + domain       = "cloud-shuttle-sandbox.aws.idealo.cloud"
+              + email        = "aws.cloud-shuttle-sandbox@idealo.de"
+              + slug         = "cloud-shuttle-sandbox"
+            }
+        )
+      + force_destroy          = false
+        id                     = "340877201453.json"
+        tags                   = {}
+      + version_id             = (known after apply)
+        # (9 unchanged attributes hidden)
+    }
+
+  # controltower_aws_account.account will be updated in-place
+  ~ resource "controltower_aws_account" "account" {
+        id                       = "pp-2dmjx3doixfyu"
+        name                     = "cloud-shuttle-sandbox"
+        tags                     = {
+            "idealo:cost-center"       = "1187"
+            "idealo:external-pii-data" = "false"
+            "idealo:product-komueb"    = "KOMUEB-3188"
+        }
+        # (5 unchanged attributes hidden)
+
+      ~ sso {
+          + first_name = "Azure"
+          + last_name  = "AD"
+            # (1 unchanged attribute hidden)
+        }
+    }
+
+  # jira_issue.cloud_security_audit_subtask will be updated in-place
+  ~ resource "jira_issue" "cloud_security_audit_subtask" {
+        id               = "433722"
+      + state_transition = "11"
+        # (8 unchanged attributes hidden)
+    }
+
+  # jira_issue.komueb will be updated in-place
+  ~ resource "jira_issue" "komueb" {
+      + fields           = {
+          + "customfield_14332" = jsonencode(
+                {
+                  + name = "m.brettschneider"
+                }
+            )
+          + "customfield_15806" = "aws.cloud-shuttle-sandbox@idealo.de"
+          + "customfield_17702" = <<-EOT
+                ||User/Group||Permissions||
+                |Cloud Shuttle|AWSAdministratorAccess, AWSReadOnlyAccess|
+            EOT
+          + "customfield_18206" = jsonencode(
+                [
+                  + {
+                      + value = "NEIN"
+                    },
+                ]
+            )
+          + "customfield_18207" = jsonencode(
+                [
+                  + {
+                      + value = "NEIN"
+                    },
+                ]
+            )
+          + "customfield_18233" = "\"340877201453\""
+        }
+        id               = "433721"
+      + state_transition = "71"
+        # (7 unchanged attributes hidden)
+    }
+
+  # null_resource.root_email will be created
+  + resource "null_resource" "root_email" {
+      + id       = (known after apply)
+      + triggers = {
+          + "group_name" = "aws.cloud-shuttle-sandbox"
+        }
+    }
+
+  # null_resource.send_email will be created
+  + resource "null_resource" "send_email" {
+      + id = (known after apply)
+    }
+
+Plan: 2 to add, 4 to change, 0 to destroy.

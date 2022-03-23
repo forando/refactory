@@ -87,3 +87,60 @@ func parseModuleBlock(block *hclwrite.Block) (*schema.BlockMetaData, error) {
 		return nil, schema.ParsingError{Message: fmt.Sprintf("Unexpected Module Block Type: [%s]", moduleType)}
 	}
 }
+
+func ParseTfState(file string) (*map[string][]schema.TfImport, error) {
+	state, err := parseTfStateFile(file)
+	if err != nil {
+		return nil, err
+	}
+	importArgs := make(map[string][]schema.TfImport)
+	for _, resource := range state.Resources {
+		if len(resource.Module) == 0 || resource.Type == "null_resource" {
+			continue
+		}
+		var moduleName string
+		moduleName, err = parseModuleName(resource.Module)
+		if err != nil {
+			return nil, err
+		}
+
+		addressTokens := make([]string, 0)
+		switch resource.Mode {
+		case "data":
+			continue
+		case "managed":
+			addressTokens = append(addressTokens, resource.Type, resource.Name)
+		default:
+			return nil, schema.ParsingError{Message: fmt.Sprintf("module: %s has usupported mode: [%s]", resource.Module, resource.Mode)}
+		}
+
+		var tfImports []schema.TfImport
+		found := false
+		if tfImports, found = importArgs[moduleName]; !found {
+			tfImports = make([]schema.TfImport, 0)
+		}
+
+		for _, instance := range resource.Instances {
+			var id string
+			address := strings.Join(addressTokens, ".")
+			if resource.Type == "aws_s3_bucket_object" {
+				if len(instance.Attrs.Bucket) == 0 {
+					return nil, schema.ParsingError{Message: fmt.Sprintf("module: %s of type: %s does not have bucket property", resource.Module, resource.Type)}
+				}
+				id = fmt.Sprintf("%s/%s", instance.Attrs.Bucket, instance.Attrs.Id)
+			} else {
+				id = instance.Attrs.Id
+			}
+			if resource.Type == "aws_ssoadmin_account_assignment" {
+				if len(instance.IndexKey) == 0 {
+					return nil, schema.ParsingError{Message: fmt.Sprintf("module: %s of type: %s does not have index_key property", resource.Module, resource.Type)}
+				}
+				address = fmt.Sprintf("%s['%s']", address, instance.IndexKey)
+			}
+			tfImport := schema.TfImport{Address: address, Id: id}
+			tfImports = append(tfImports, tfImport)
+		}
+		importArgs[moduleName] = tfImports
+	}
+	return &importArgs, nil
+}
