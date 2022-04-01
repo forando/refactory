@@ -2,6 +2,7 @@ package filesystem
 
 import (
 	"fmt"
+	"github.com/pkg/errors"
 	"io/ioutil"
 	"log"
 	"os"
@@ -76,7 +77,7 @@ func NewOsFs() FS {
 func DirFiles(fs FS, dir string) (primary []string, err error) {
 	infos, err := fs.ReadDir(dir)
 	if err != nil {
-		err = FsError{Message: fmt.Sprintf("Directory %s does not exist or cannot be read.", dir)}
+		err = errors.Errorf("Directory %s does not exist or cannot be read.", dir)
 		return
 	}
 

@@ -1,10 +1,10 @@
 package parser
 
 import (
-	"fmt"
 	"github.com/forando/refactory/pkg/schema"
 	"github.com/hashicorp/hcl/v2/hclsyntax"
 	"github.com/hashicorp/hcl/v2/hclwrite"
+	"github.com/pkg/errors"
 	"strconv"
 	"strings"
 )
@@ -46,7 +46,7 @@ func ParseAccountModule(body *hclwrite.Body, permissionSetNames *map[string]stri
 	ouKey := string(organizationalUnitAttr.Expr().BuildTokens(nil)[2].Bytes)
 	organizationalUnit, ok := organizationalUnits[ouKey]
 	if !ok {
-		return nil, schema.ParsingError{Message: fmt.Sprintf("cannot find [%s] key in organizationalUnits map", ouKey)}
+		return nil, errors.Errorf("cannot find [%s] key in organizationalUnits map", ouKey)
 	}
 	module.OrganizationalUnit = organizationalUnit
 
@@ -58,7 +58,7 @@ func ParseAccountModule(body *hclwrite.Body, permissionSetNames *map[string]stri
 	costCenterStr := getExpressionAsString(costCenterAttr)
 	intVar, intErr := strconv.Atoi(costCenterStr)
 	if intErr != nil {
-		return nil, schema.ParsingError{Message: fmt.Sprintf("cannot parse %s vlaue of [%s] into int", key, costCenterStr)}
+		return nil, errors.Errorf("cannot parse %s vlaue of [%s] into int", key, costCenterStr)
 	}
 	module.CostCenter = intVar
 
@@ -110,7 +110,7 @@ func ParseAccountModule(body *hclwrite.Body, permissionSetNames *map[string]stri
 		personalDataProcessedStr := getExpressionAsString(personalDataProcessedAttr)
 		boolVar, boolErr := strconv.ParseBool(personalDataProcessedStr)
 		if boolErr != nil {
-			return nil, schema.ParsingError{Message: fmt.Sprintf("cannot parse %s vlaue of [%s] into bool", key, personalDataProcessedStr)}
+			return nil, errors.Errorf("cannot parse %s vlaue of [%s] into bool", key, personalDataProcessedStr)
 		}
 		module.PersonalDataProcessed = boolVar
 	}
@@ -121,7 +121,7 @@ func ParseAccountModule(body *hclwrite.Body, permissionSetNames *map[string]stri
 		personalDataStoredStr := getExpressionAsString(personalDataStoredAttr)
 		boolVar, boolErr := strconv.ParseBool(personalDataStoredStr)
 		if boolErr != nil {
-			return nil, schema.ParsingError{Message: fmt.Sprintf("cannot parse %s vlaue of [%s] into bool", key, personalDataStoredStr)}
+			return nil, errors.Errorf("cannot parse %s vlaue of [%s] into bool", key, personalDataStoredStr)
 		}
 		module.PersonalDataStored = boolVar
 	}
@@ -138,7 +138,7 @@ func ParseAccountModule(body *hclwrite.Body, permissionSetNames *map[string]stri
 		accountBudgetStr := getExpressionAsString(accountBudgetAttr)
 		intVar, intErr := strconv.Atoi(accountBudgetStr)
 		if intErr != nil {
-			return nil, schema.ParsingError{Message: fmt.Sprintf("cannot parse %s vlaue of [%s] into int", key, accountBudgetStr)}
+			return nil, errors.Errorf("cannot parse %s vlaue of [%s] into int", key, accountBudgetStr)
 		}
 		module.AccountBudget = intVar
 	}
@@ -160,7 +160,7 @@ func parsePermissions(permissionAttr *hclwrite.Attribute, permissionsType string
 	oBrace := exprTokens[0]
 	cBrace := exprTokens[len(exprTokens)-1]
 	if oBrace.Type != hclsyntax.TokenOBrace || cBrace.Type != hclsyntax.TokenCBrace {
-		return nil, schema.ParsingError{Message: fmt.Sprintf("%s expression is not enclosed in braces", permissionsType)}
+		return nil, errors.Errorf("%s expression is not enclosed in braces", permissionsType)
 	}
 	inside := exprTokens[1 : len(exprTokens)-1]
 
@@ -179,7 +179,7 @@ func parsePermissions(permissionAttr *hclwrite.Attribute, permissionsType string
 				key = quotedTokensToString(tokens)
 
 				if _, found := res[key]; found {
-					return nil, schema.ParsingError{Message: fmt.Sprintf("%s expression. Key [%s] already exists", permissionsType, key)}
+					return nil, errors.Errorf("%s expression. Key [%s] already exists", permissionsType, key)
 				}
 
 				tokens = hclwrite.Tokens{}
@@ -197,7 +197,7 @@ func parsePermissions(permissionAttr *hclwrite.Attribute, permissionsType string
 				end = index
 
 				if !openBracketFound {
-					return nil, schema.ParsingError{Message: fmt.Sprintf("%s expression. Key [%s]. Close bracket found before open one at token %v", permissionsType, key, index)}
+					return nil, errors.Errorf("%s expression. Key [%s]. Close bracket found before open one at token %v", permissionsType, key, index)
 				}
 
 				openBracketFound = false
@@ -205,7 +205,7 @@ func parsePermissions(permissionAttr *hclwrite.Attribute, permissionsType string
 
 				value, err := getValueTokens(&inside, start, end, permissionSetNames)
 				if err != nil {
-					return nil, schema.ParsingError{Message: fmt.Sprintf("%s expression. Key [%s]. %s", permissionsType, key, err.Error())}
+					return nil, errors.Errorf("%s expression. Key [%s]. %s", permissionsType, key, err.Error())
 				}
 				res[key] = value
 			}
@@ -307,7 +307,7 @@ func quotedTokensToString(tokens hclwrite.Tokens) string {
 }
 
 func makeError(key string) (*schema.AccountModule, error) {
-	return nil, schema.ParsingError{Message: fmt.Sprintf("[%s] property not found in aws-account module", key)}
+	return nil, errors.Errorf("[%s] property not found in aws-account module", key)
 }
 
 func toValue(tokens hclwrite.Tokens, permissionSetNames *map[string]string) (*schema.PermissionSet, error) {
@@ -318,18 +318,18 @@ func toValue(tokens hclwrite.Tokens, permissionSetNames *map[string]string) (*sc
 		}
 		if string(token.Bytes) == "module" {
 			if len(tokens) < index+3 {
-				return nil, schema.ParsingError{Message: fmt.Sprintf("module reference does not have enough tokens, expected %v but actual %v", index+3, len(tokens))}
+				return nil, errors.Errorf("module reference does not have enough tokens, expected %v but actual %v", index+3, len(tokens))
 			}
 			moduleNameToken := tokens[index+2]
 			moduleName := string(moduleNameToken.Bytes)
 
 			permissionSetName, found := (*permissionSetNames)[moduleName]
 			if !found {
-				return nil, schema.ParsingError{Message: fmt.Sprintf("Cannot find [%s] permission set", moduleName)}
+				return nil, errors.Errorf("Cannot find [%s] permission set", moduleName)
 			}
 			return &schema.PermissionSet{Policy: schema.InlinePolicy, Val: permissionSetName}, nil
 		}
 	}
 
-	return nil, schema.ParsingError{Message: fmt.Sprintf("tokens don't contain neither quoted strings nor module references")}
+	return nil, errors.New("tokens don't contain neither quoted strings nor module references")
 }

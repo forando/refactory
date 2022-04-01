@@ -1,7 +1,7 @@
 package shellexec
 
 import (
-	"fmt"
+	"github.com/pkg/errors"
 	"os/exec"
 )
 
@@ -12,7 +12,7 @@ func ExecTerragruntImport(dir string, address string, id string) (*string, error
 	outputBytes, err := cmd.CombinedOutput()
 	output := string(outputBytes)
 	if err != nil {
-		return nil, shellError{Message: fmt.Sprintf("Dir: %s, error: %s", dir, output)}
+		return nil, errors.Errorf("Dir: %s, error: %s", dir, output)
 	}
 	return &output, nil
 }

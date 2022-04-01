@@ -1,8 +1,8 @@
 package parser
 
 import (
-	"fmt"
 	"github.com/forando/refactory/pkg/schema"
+	"github.com/pkg/errors"
 	"strings"
 )
 
@@ -19,7 +19,7 @@ func ParseImports(fileName string) (*[]schema.Import, error) {
 
 	for _, record := range records {
 		if len(record) != importRecordItems {
-			return nil, schema.ParsingError{Message: fmt.Sprintf("CSV Import Record != %v items: %s", importRecordItems, record)}
+			return nil, errors.Errorf("CSV Import Record != %v items: %s", importRecordItems, record)
 		}
 		imp := schema.Import{Module: record[0], Address: strings.ReplaceAll(record[1], "'", "\""), Id: record[2]}
 		imports = append(imports, imp)

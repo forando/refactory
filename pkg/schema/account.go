@@ -1,8 +1,8 @@
 package schema
 
 import (
-	"fmt"
 	"github.com/hashicorp/hcl/v2/hclwrite"
+	"github.com/pkg/errors"
 )
 
 const (
@@ -62,9 +62,8 @@ func (module *AccountModule) CheckAllAttributes(attrs *map[string]*hclwrite.Attr
 
 	for key := range *attrs {
 		if _, ok := accountModuleKnownAttrs[key]; !ok {
-			return ParsingError{Message: fmt.Sprintf("unknown attribute [%s] in aws-account module", key)}
+			return errors.Errorf("unknown attribute [%s] in aws-account module", key)
 		}
 	}
-
 	return nil
 }

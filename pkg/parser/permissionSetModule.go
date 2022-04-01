@@ -1,9 +1,9 @@
 package parser
 
 import (
-	"fmt"
 	"github.com/forando/refactory/pkg/schema"
 	"github.com/hashicorp/hcl/v2/hclwrite"
+	"github.com/pkg/errors"
 )
 
 func ParsePermissionSetModule(body *hclwrite.Body, policyDocuments *map[string]*schema.PolicyDocument) (*schema.PermissionSetModule, error) {
@@ -46,7 +46,7 @@ func ParsePermissionSetModule(body *hclwrite.Body, policyDocuments *map[string]*
 		pDocName := string(inlinePolicyDocumentsAttr.Expr().BuildTokens(nil)[4].Bytes)
 		pDockBlock, found := (*policyDocuments)[pDocName]
 		if !found {
-			return nil, schema.ParsingError{Message: fmt.Sprintf("cannot find [%s] policyDocument", pDocName)}
+			return nil, errors.Errorf("cannot find [%s] policyDocument", pDocName)
 		}
 		module.InlinePolicyDocumentAttr = inlinePolicyDocumentsAttr
 		module.PolicyDocument = pDockBlock
@@ -69,5 +69,5 @@ func ParsePermissionSetModule(body *hclwrite.Body, policyDocuments *map[string]*
 }
 
 func makePermissionSetError(key string) (*schema.PermissionSetModule, error) {
-	return nil, schema.ParsingError{Message: fmt.Sprintf("[%s] property not found in aws-ssoadmin-permission-set module", key)}
+	return nil, errors.Errorf("[%s] property not found in aws-ssoadmin-permission-set module", key)
 }

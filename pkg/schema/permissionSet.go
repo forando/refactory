@@ -1,8 +1,8 @@
 package schema
 
 import (
-	"fmt"
 	"github.com/hashicorp/hcl/v2/hclwrite"
+	"github.com/pkg/errors"
 )
 
 type PermissionSet struct {
@@ -47,7 +47,7 @@ func (module *PermissionSetModule) CheckAllAttributes(attrs *map[string]*hclwrit
 
 	for key := range *attrs {
 		if _, ok := permissionSetKnownAttrs[key]; !ok {
-			return ParsingError{Message: fmt.Sprintf("unknown attribute [%s] in aws-ssoadmin-permission-set module", key)}
+			return errors.Errorf("unknown attribute [%s] in aws-ssoadmin-permission-set module", key)
 		}
 	}
 

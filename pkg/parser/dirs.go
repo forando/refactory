@@ -1,8 +1,7 @@
 package parser
 
 import (
-	"fmt"
-	"github.com/forando/refactory/pkg/schema"
+	"github.com/pkg/errors"
 )
 
 const dirRecordItems = 1
@@ -18,7 +17,7 @@ func ParseDirs(fileName string) (*[]string, error) {
 
 	for _, record := range records {
 		if len(record) != dirRecordItems {
-			return nil, schema.ParsingError{Message: fmt.Sprintf("CSV Dir Record != %v items: %s", dirRecordItems, record)}
+			return nil, errors.Errorf("CSV Dir Record != %v items: %s", dirRecordItems, record)
 		}
 		dirs = append(dirs, record[0])
 	}

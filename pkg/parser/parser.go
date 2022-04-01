@@ -6,6 +6,7 @@ import (
 	"github.com/forando/refactory/pkg/schema"
 	"github.com/hashicorp/hcl/v2"
 	"github.com/hashicorp/hcl/v2/hclwrite"
+	"github.com/pkg/errors"
 	"log"
 	"strings"
 )
@@ -34,7 +35,7 @@ func ParseBlockType(block *hclwrite.Block) (*schema.BlockMetaData, error) {
 	case schema.ModuleBlock:
 		return parseModuleBlock(block)
 	default:
-		return nil, schema.ParsingError{Message: fmt.Sprintf("block of type [%s] found but not expected", block.Type())}
+		return nil, errors.Errorf("block of type [%s] found but not expected", block.Type())
 	}
 }
 
@@ -42,16 +43,16 @@ func parseDataBlock(block *hclwrite.Block) (*schema.BlockMetaData, error) {
 	labels := block.Labels()
 
 	if len(labels) == 0 {
-		return nil, schema.ParsingError{Message: "Data Block does not have labels"}
+		return nil, errors.New("Data Block does not have labels")
 	}
 
 	dataBlockType := labels[0]
 	if dataBlockType != schema.IamPolicyDocumentType {
-		return nil, schema.ParsingError{Message: fmt.Sprintf("Unexpected Data Block Type: [%s]", dataBlockType)}
+		return nil, errors.Errorf("Unexpected Data Block Type: [%s]", dataBlockType)
 	}
 
 	if len(labels) < 2 {
-		return nil, schema.ParsingError{Message: fmt.Sprintf("Data Block: [%s] does not have name", dataBlockType)}
+		return nil, errors.Errorf("Data Block: [%s] does not have name", dataBlockType)
 	}
 
 	return &schema.BlockMetaData{BlockType: schema.IamPolicyDocumentType, BlockName: labels[1]}, nil
@@ -62,7 +63,7 @@ func parseModuleBlock(block *hclwrite.Block) (*schema.BlockMetaData, error) {
 	labels := block.Labels()
 
 	if len(labels) == 0 {
-		return nil, schema.ParsingError{Message: "Module Block does not have labels"}
+		return nil, errors.New("Module Block does not have labels")
 	}
 
 	attr := block.Body().Attributes()
@@ -70,7 +71,7 @@ func parseModuleBlock(block *hclwrite.Block) (*schema.BlockMetaData, error) {
 	key := "source"
 	sourceAttr := attr[key]
 	if sourceAttr == nil {
-		return nil, schema.ParsingError{Message: fmt.Sprintf("Module block [%s] does not have [%s] attribute", labels[0], key)}
+		return nil, errors.Errorf("Module block [%s] does not have [%s] attribute", labels[0], key)
 	}
 
 	source := getExpressionAsString(sourceAttr)
@@ -84,7 +85,7 @@ func parseModuleBlock(block *hclwrite.Block) (*schema.BlockMetaData, error) {
 	case schema.PermissionSetModuleType:
 		return &schema.BlockMetaData{BlockType: schema.PermissionSetModuleType, BlockName: labels[0]}, nil
 	default:
-		return nil, schema.ParsingError{Message: fmt.Sprintf("Unexpected Module Block Type: [%s]", moduleType)}
+		return nil, errors.Errorf("Unexpected Module Block Type: [%s]", moduleType)
 	}
 }
 
@@ -111,7 +112,7 @@ func ParseTfState(file string) (*map[string][]schema.TfImport, error) {
 		case "managed":
 			addressTokens = append(addressTokens, resource.Type, resource.Name)
 		default:
-			return nil, schema.ParsingError{Message: fmt.Sprintf("module: %s has usupported mode: [%s]", resource.Module, resource.Mode)}
+			return nil, errors.Errorf("module: %s has usupported mode: [%s]", resource.Module, resource.Mode)
 		}
 
 		var tfImports []schema.TfImport
@@ -125,7 +126,7 @@ func ParseTfState(file string) (*map[string][]schema.TfImport, error) {
 			address := strings.Join(addressTokens, ".")
 			if resource.Type == "aws_s3_bucket_object" {
 				if len(instance.Attrs.Bucket) == 0 {
-					return nil, schema.ParsingError{Message: fmt.Sprintf("module: %s of type: %s does not have bucket property", resource.Module, resource.Type)}
+					return nil, errors.Errorf("module: %s of type: %s does not have bucket property", resource.Module, resource.Type)
 				}
 				id = fmt.Sprintf("%s/%s", instance.Attrs.Bucket, instance.Attrs.Id)
 			} else {
@@ -133,7 +134,7 @@ func ParseTfState(file string) (*map[string][]schema.TfImport, error) {
 			}
 			if resource.Type == "aws_ssoadmin_account_assignment" {
 				if len(instance.IndexKey) == 0 {
-					return nil, schema.ParsingError{Message: fmt.Sprintf("module: %s of type: %s does not have index_key property", resource.Module, resource.Type)}
+					return nil, errors.Errorf("module: %s of type: %s does not have index_key property", resource.Module, resource.Type)
 				}
 				address = fmt.Sprintf("%s['%s']", address, instance.IndexKey)
 			}

@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
+	"github.com/pkg/errors"
 	"io"
 	"log"
 	"os/exec"
@@ -19,11 +20,11 @@ func ExecTerragruntInitWithStdIn(dir string) error {
 
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
-		return shellError{Message: fmt.Sprintf("Dir: %s, error: %s", dir, err)}
+		return errors.Errorf("Dir: %s, error: %s", dir, err)
 	}
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
-		return shellError{Message: fmt.Sprintf("Dir: %s, error: %s", dir, err)}
+		return errors.Errorf("Dir: %s, error: %s", dir, err)
 	}
 	reader := bufio.NewReader(stdout)
 
@@ -49,7 +50,7 @@ func ExecTerragruntInitWithStdIn(dir string) error {
 	}(reader)
 
 	if err := cmd.Start(); err != nil {
-		return shellError{Message: fmt.Sprintf("Dir: %s, error: %s", dir, err)}
+		return errors.Errorf("Dir: %s, error: %s", dir, err)
 	}
 	output := <-done
 	log.Printf("Dir: %s, output: %s", dir, output)
@@ -58,7 +59,7 @@ func ExecTerragruntInitWithStdIn(dir string) error {
 		if len(stderrBuf.Bytes()) > 0 {
 			output = fmt.Sprintf("%s\n%s", output, string(stderrBuf.Bytes()))
 		}
-		return shellError{Message: fmt.Sprintf("Dir: %s, error: %s", dir, err)}
+		return errors.Errorf("Dir: %s, error: %s", dir, err)
 	}
 	return nil
 }
@@ -69,7 +70,7 @@ func ExecTerragruntInit(dir string) error {
 
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		return shellError{Message: fmt.Sprintf("Dir: %s, error: %s", dir, string(output))}
+		return errors.Errorf("Dir: %s, error: %s", dir, string(output))
 	}
 	return nil
 }
