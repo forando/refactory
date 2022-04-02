@@ -5,7 +5,6 @@ import (
 	"github.com/hashicorp/hcl/v2/hclsyntax"
 	"github.com/hashicorp/hcl/v2/hclwrite"
 	"github.com/pkg/errors"
-	"strconv"
 	"strings"
 )
 
@@ -23,130 +22,97 @@ var organizationalUnits = map[string]string{
 func ParseAccountModule(body *hclwrite.Body, permissionSetNames *map[string]string) (*schema.AccountModule, error) {
 	var module schema.AccountModule
 
-	attr := body.Attributes()
+	attrs := Attributes{Map: body.Attributes(), ModuleName: "aws-account"}
 
-	if err := module.CheckAllAttributes(&attr); err != nil {
+	if err := module.CheckAllAttributes(&attrs.Map); err != nil {
 		return nil, err
 	}
 
-	var key string
-
-	key = schema.AccName
-	accountNameAttr := attr[key]
-	if accountNameAttr == nil {
-		return makeError(key)
-	}
-	module.AccountName = getExpressionAsString(accountNameAttr)
-
-	key = schema.AccOrganizationalUnit
-	organizationalUnitAttr := attr[key]
-	if organizationalUnitAttr == nil {
-		return makeError(key)
-	}
-	ouKey := string(organizationalUnitAttr.Expr().BuildTokens(nil)[2].Bytes)
-	organizationalUnit, ok := organizationalUnits[ouKey]
-	if !ok {
-		return nil, errors.Errorf("cannot find [%s] key in organizationalUnits map", ouKey)
-	}
-	module.OrganizationalUnit = organizationalUnit
-
-	key = schema.AccCostCenter
-	costCenterAttr := attr[key]
-	if costCenterAttr == nil {
-		return makeError(key)
-	}
-	costCenterStr := getExpressionAsString(costCenterAttr)
-	intVar, intErr := strconv.Atoi(costCenterStr)
-	if intErr != nil {
-		return nil, errors.Errorf("cannot parse %s vlaue of [%s] into int", key, costCenterStr)
-	}
-	module.CostCenter = intVar
-
-	key = schema.AccKomuebProductTicket
-	productTicketAttr := attr[key]
-	if productTicketAttr == nil {
-		return makeError(key)
-	}
-	module.ProductTicket = getExpressionAsString(productTicketAttr)
-
-	key = schema.AccOwnerEmail
-	emailAttr := attr[key]
-	if emailAttr == nil {
-		return makeError(key)
-	}
-	module.OwnerEmail = getExpressionAsString(emailAttr)
-
-	key = schema.AccOwnerJiraUsername
-	jiraUserNameAttr := attr[key]
-	if jiraUserNameAttr == nil {
-		return makeError(key)
-	}
-	module.OwnerJiraUsername = getExpressionAsString(jiraUserNameAttr)
-
-	key = schema.AccGroupPermissions
-	groupPermissionsAttr := attr[key]
-	if groupPermissionsAttr == nil {
-		return makeError(key)
-	}
-	groupPermissions, err := parsePermissions(groupPermissionsAttr, key, permissionSetNames)
-	if err != nil {
+	if val, err := attrs.getStr(schema.AccName); err == nil {
+		module.AccountName = val
+	} else {
 		return nil, err
 	}
-	module.GroupPermissions = groupPermissions
 
-	key = schema.AccUserPermissions
-	userPermissionsAttr := attr[key]
-	if userPermissionsAttr != nil {
-		userPermissions, err := parsePermissions(userPermissionsAttr, key, permissionSetNames)
+	if attr, err := attrs.getAttr(schema.AccOrganizationalUnit); err == nil {
+		ouKey := string(attr.Expr().BuildTokens(nil)[2].Bytes)
+		organizationalUnit, ok := organizationalUnits[ouKey]
+		if !ok {
+			return nil, errors.Errorf("cannot find [%s] key in organizationalUnits map", ouKey)
+		}
+		module.OrganizationalUnit = organizationalUnit
+	} else {
+		return nil, err
+	}
+
+	if val, keyNotFound, errInt := attrs.getInt(schema.AccCostCenter); keyNotFound == nil && errInt == nil {
+		module.CostCenter = val
+	} else if keyNotFound != nil {
+		return nil, keyNotFound
+	} else {
+		return nil, errInt
+	}
+
+	if val, err := attrs.getStr(schema.AccKomuebProductTicket); err == nil {
+		module.ProductTicket = val
+	} else {
+		return nil, err
+	}
+
+	if val, err := attrs.getStr(schema.AccOwnerEmail); err == nil {
+		module.OwnerEmail = val
+	} else {
+		return nil, err
+	}
+
+	if val, err := attrs.getStr(schema.AccOwnerJiraUsername); err == nil {
+		module.OwnerJiraUsername = val
+	} else {
+		return nil, err
+	}
+
+	if attr, err := attrs.getAttr(schema.AccGroupPermissions); err == nil {
+		groupPermissions, err := parsePermissions(attr, schema.AccGroupPermissions, permissionSetNames)
+		if err != nil {
+			return nil, err
+		}
+		module.GroupPermissions = groupPermissions
+	} else {
+		return nil, err
+	}
+
+	if attr, err := attrs.getAttr(schema.AccUserPermissions); err == nil {
+		userPermissions, err := parsePermissions(attr, schema.AccUserPermissions, permissionSetNames)
 		if err != nil {
 			return nil, err
 		}
 		module.UserPermissions = userPermissions
 	}
 
-	key = schema.AccPersonalDataProcessed
-	personalDataProcessedAttr := attr[key]
-	if personalDataProcessedAttr != nil {
-		personalDataProcessedStr := getExpressionAsString(personalDataProcessedAttr)
-		boolVar, boolErr := strconv.ParseBool(personalDataProcessedStr)
-		if boolErr != nil {
-			return nil, errors.Errorf("cannot parse %s vlaue of [%s] into bool", key, personalDataProcessedStr)
-		}
-		module.PersonalDataProcessed = boolVar
+	if val, keyNotFound, errBool := attrs.getBool(schema.AccPersonalDataProcessed); keyNotFound == nil && errBool == nil {
+		module.PersonalDataProcessed = val
+	} else if errBool != nil {
+		return nil, errBool
 	}
 
-	key = schema.AccPersonalDataStored
-	personalDataStoredAttr := attr[key]
-	if personalDataStoredAttr != nil {
-		personalDataStoredStr := getExpressionAsString(personalDataStoredAttr)
-		boolVar, boolErr := strconv.ParseBool(personalDataStoredStr)
-		if boolErr != nil {
-			return nil, errors.Errorf("cannot parse %s vlaue of [%s] into bool", key, personalDataStoredStr)
-		}
-		module.PersonalDataStored = boolVar
+	if val, keyNotFound, errBool := attrs.getBool(schema.AccPersonalDataStored); keyNotFound == nil && errBool == nil {
+		module.PersonalDataStored = val
+	} else if errBool != nil {
+		return nil, errBool
 	}
 
-	key = schema.AccRootEmail
-	rootEmailAttr := attr[key]
-	if rootEmailAttr != nil {
-		module.RootEmail = getExpressionAsString(rootEmailAttr)
+	if val, err := attrs.getStr(schema.AccRootEmail); err == nil {
+		module.RootEmail = val
 	}
 
-	key = schema.AccAccountBudget
-	accountBudgetAttr := attr[key]
-	if accountBudgetAttr != nil {
-		accountBudgetStr := getExpressionAsString(accountBudgetAttr)
-		intVar, intErr := strconv.Atoi(accountBudgetStr)
-		if intErr != nil {
-			return nil, errors.Errorf("cannot parse %s vlaue of [%s] into int", key, accountBudgetStr)
-		}
-		module.AccountBudget = intVar
+	if val, keyNotFound, errInt := attrs.getInt(schema.AccAccountBudget); keyNotFound == nil && errInt == nil {
+		module.AccountBudget = val
+	} else if errInt != nil {
+		return nil, errInt
 	}
 
-	key = schema.AccAccountBudgetEmail
-	accountBudgetEmailAttr := attr[key]
-	if accountBudgetEmailAttr != nil {
-		module.AccountBudgetEmail = getExpressionAsString(accountBudgetEmailAttr)
+	if val, err := attrs.getStr(schema.AccAccountBudgetEmail); err == nil {
+		module.AccountBudgetEmail = val
 	}
 
 	return &module, nil
@@ -304,10 +270,6 @@ func quotedTokensToString(tokens hclwrite.Tokens) string {
 	}
 	ts = string(tokens[start+1 : end].Bytes())
 	return strings.TrimSpace(ts)
-}
-
-func makeError(key string) (*schema.AccountModule, error) {
-	return nil, errors.Errorf("[%s] property not found in aws-account module", key)
 }
 
 func toValue(tokens hclwrite.Tokens, permissionSetNames *map[string]string) (*schema.PermissionSet, error) {
