@@ -31,6 +31,9 @@ Run `ulimit -n` to see the limit.
 
 Run `ulimit -n 4096` to make it larger.
 
+### `terragrunt apply` on PermissionSets fails
+Inline policy generation in json is currently malformed.
+To fix it just reformat the file manually.
 
 ### Useful commands
 
