@@ -140,7 +140,9 @@ func importResources(dir string, resources chan<- schema.ResourceCount, res chan
 
 	guard <- struct{}{} //would block if guard channel is already filled
 
-	if err := shellexec.ExecTerragruntInit(dir); err != nil {
+	terragrunt := shellexec.Terragrunt{Dir: dir}
+
+	if err := terragrunt.Init(); err != nil {
 		cleanErrors := filesystem.CleanDir(dir)
 		res <- &schema.ErrResult{Status: schema.Err, Dir: dir, ResourceCount: resourceCount, Message: err.Error()}
 		done <- schema.Done{Status: schema.Err, Dir: dir, FailedResource: &schema.ImportResource{Address: "", Id: ""}, ResourceCount: resourceCount, Message: err.Error(), CleanErrors: cleanErrors}
@@ -151,8 +153,8 @@ func importResources(dir string, resources chan<- schema.ResourceCount, res chan
 
 	for _, imp := range *imports {
 		doneImports = append(doneImports, imp)
-		if output, err := shellexec.ExecTerragruntImport(dir, imp.Address, imp.Id); err != nil {
-			shellexec.ExecTerragruntRollBackImports(dir, &doneImports)
+		if output, err := terragrunt.Import(imp.Address, imp.Id); err != nil {
+			terragrunt.RollBackImports(&doneImports)
 			cleanErrors := filesystem.CleanDir(dir)
 			res <- &schema.ErrResult{Status: schema.Err, Dir: dir, ResourceCount: resourceCount, Message: err.Error()}
 			done <- schema.Done{Status: schema.Err, Dir: dir, FailedResource: &schema.ImportResource{Address: imp.Address, Id: imp.Id}, ResourceCount: resourceCount, Message: err.Error(), CleanErrors: cleanErrors}
