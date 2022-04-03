@@ -4,7 +4,6 @@ import (
 	"github.com/hashicorp/hcl/v2"
 	"github.com/hashicorp/hcl/v2/hclwrite"
 	"github.com/pkg/errors"
-	"github.com/zclconf/go-cty/cty"
 	"testing"
 )
 
@@ -75,16 +74,11 @@ func TestShouldFailIfWrongType(t *testing.T) {
 
 func TestShouldParseArray(t *testing.T) {
 	bytes := []byte(expression)
-	ctx := hcl.EvalContext{
-		Variables: map[string]cty.Value{
-			"module": cty.MapVal(map[string]cty.Value{
-				"komueb_1260_extended_read_only_access_permission_set": cty.MapVal(map[string]cty.Value{
-					"permission_set_name": cty.StringVal("ExtendedReadOnlyAccess"),
-				}),
-			}),
-		},
+	pSetNames := map[string]string{
+		"komueb_1260_extended_read_only_access_permission_set": "ExtendedReadOnlyAccess",
 	}
-	p := ExpressionParser{Context: &ctx}
+	ctx := buildContext(&pSetNames)
+	p := ExpressionParser{Context: ctx}
 	res, err := p.ParseArrayExpr("Cloud Shuttle", bytes)
 	if err != nil {
 		t.Error(err)
