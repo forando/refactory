@@ -22,25 +22,12 @@ func ParsePermissionSetModule(body *hclwrite.Body, policyDocuments *map[string]*
 		return nil, err
 	}
 
-	if attr, err := attrs.getAttr("source"); err == nil {
-		module.SourceAttr = attr
-	} else {
-		return nil, err
-	}
-
-	if attr, err := attrs.getAttr(schema.PsSsoAdminInstanceArn); err == nil {
-		module.SsoAdminInstanceArnAttr = attr
-	} else {
-		return nil, err
-	}
-
 	if attr, err := attrs.getAttr(schema.PsInlinePolicyDocument); err == nil {
 		pDocName := string(attr.Expr().BuildTokens(nil)[4].Bytes)
 		pDockBlock, found := (*policyDocuments)[pDocName]
 		if !found {
 			return nil, errors.Errorf("cannot find [%s] policyDocument", pDocName)
 		}
-		module.InlinePolicyDocumentAttr = attr
 		module.PolicyDocument = pDockBlock
 		module.PolicyDocumentName = pDocName
 	}

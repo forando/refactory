@@ -47,7 +47,7 @@ func BootstrapPermissionSetTerragrunt(fileName string, module *schema.Permission
 		inputsBody.AppendUnstructuredTokens(module.ManagedPolicyArnsAttr.BuildTokens(nil))
 	}
 
-	if module.InlinePolicyDocumentAttr != nil {
+	if module.PolicyDocument != nil {
 		inputsBody.AppendUnstructuredTokens(hclwrite.Tokens{
 			{Type: hclsyntax.TokenStringLit, Bytes: []byte("# language=JSON")},
 			{Type: hclsyntax.TokenNewline, Bytes: []byte("\n")},

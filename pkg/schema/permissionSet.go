@@ -19,17 +19,14 @@ const (
 )
 
 type PermissionSetModule struct {
-	ModuleName               string
-	SourceAttr               *hclwrite.Attribute
-	SsoAdminInstanceArnAttr  *hclwrite.Attribute
-	PermissionSetName        string
-	NameAttr                 *hclwrite.Attribute
-	InlinePolicyDocumentAttr *hclwrite.Attribute
-	PolicyDocumentName       string
-	PolicyDocument           *PolicyDocument
-	ManagedPolicyArnsAttr    *hclwrite.Attribute
-	TagsAttr                 *hclwrite.Attribute
-	ProductTicket            string
+	ModuleName            string
+	PermissionSetName     string
+	NameAttr              *hclwrite.Attribute
+	PolicyDocumentName    string
+	PolicyDocument        *PolicyDocument
+	ManagedPolicyArnsAttr *hclwrite.Attribute
+	TagsAttr              *hclwrite.Attribute
+	ProductTicket         string
 }
 
 type PermissionSetModules []*PermissionSetModule
