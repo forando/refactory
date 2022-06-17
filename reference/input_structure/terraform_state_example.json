@@ -398,7 +398,7 @@
             "provisioned_product_name": "cloud-shuttle-sandbox",
             "sso": [
               {
-                "email": "david.graesser@idealo.de",
+                "email": "firstname.lastname@domain.com",
                 "first_name": "Azure",
                 "last_name": "AD"
               }
@@ -626,19 +626,19 @@
       "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
       "instances": [
         {
-          "index_key": "heiko.rothe@idealo.de",
+          "index_key": "firstname.lastname@domain.com",
           "schema_version": 0,
           "attributes": {
             "filter": [
               {
                 "attribute_path": "UserName",
-                "attribute_value": "heiko.rothe@idealo.de"
+                "attribute_value": "firstname.lastname@domain.com"
               }
             ],
             "id": "99672d234f-dfdfaa2d-5994-4678-b32b-8d7ee8b18f28",
             "identity_store_id": "d-99672d234f",
             "user_id": "99672d234f-dfdfaa2d-5994-4678-b32b-8d7ee8b18f28",
-            "user_name": "heiko.rothe@idealo.de"
+            "user_name": "firstname.lastname@domain.com"
           },
           "sensitive_attributes": []
         }
@@ -995,7 +995,7 @@
       "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
       "instances": [
         {
-          "index_key": "heiko.rothe@idealo.de.AWSPowerUserAccess",
+          "index_key": "firstname.lastname@domain.com.AWSPowerUserAccess",
           "schema_version": 0,
           "attributes": {
             "id": "99672d234f-dfdfaa2d-5994-4678-b32b-8d7ee8b18f28,USER,448556544475,AWS_ACCOUNT,arn:aws:sso:::permissionSet/ssoins-69877a64b4162b02/ps-9e9e6821c2ec03ce,arn:aws:sso:::instance/ssoins-69877a64b4162b02",
@@ -1037,7 +1037,7 @@
             "provisioned_product_name": "Test_Account_v2",
             "sso": [
               {
-                "email": "heiko.rothe@idealo.de",
+                "email": "firstname.lastname@domain.com",
                 "first_name": "Azure",
                 "last_name": "AD"
               }
@@ -1299,19 +1299,19 @@
       "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
       "instances": [
         {
-          "index_key": "heiko.rothe@idealo.de",
+          "index_key": "firstname.lastname@domain.com",
           "schema_version": 0,
           "attributes": {
             "filter": [
               {
                 "attribute_path": "UserName",
-                "attribute_value": "heiko.rothe@idealo.de"
+                "attribute_value": "firstname.lastname@domain.com"
               }
             ],
             "id": "99672d234f-dfdfaa2d-5994-4678-b32b-8d7ee8b18f28",
             "identity_store_id": "d-99672d234f",
             "user_id": "99672d234f-dfdfaa2d-5994-4678-b32b-8d7ee8b18f28",
-            "user_name": "heiko.rothe@idealo.de"
+            "user_name": "firstname.lastname@domain.com"
           },
           "sensitive_attributes": []
         }
@@ -1712,7 +1712,7 @@
       "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
       "instances": [
         {
-          "index_key": "heiko.rothe@idealo.de.AWSPowerUserAccess",
+          "index_key": "firstname.lastname@domain.com.AWSPowerUserAccess",
           "schema_version": 0,
           "attributes": {
             "id": "99672d234f-dfdfaa2d-5994-4678-b32b-8d7ee8b18f28,USER,180415024374,AWS_ACCOUNT,arn:aws:sso:::permissionSet/ssoins-69877a64b4162b02/ps-9e9e6821c2ec03ce,arn:aws:sso:::instance/ssoins-69877a64b4162b02",
@@ -1754,7 +1754,7 @@
             "provisioned_product_name": "Test_Account_v3",
             "sso": [
               {
-                "email": "wanis.fahmy@idealo.de",
+                "email": "firstname.lastname@domain.com",
                 "first_name": "Azure",
                 "last_name": "AD"
               }
@@ -1828,7 +1828,7 @@
             "fields": {
               "customfield_14332": "{\"name\":\"m.brettschneider\"}",
               "customfield_15806": "aws.test-account-v3@idealo.de",
-              "customfield_17702": "||User/Group||Permissions||\r\n|Cloud Shuttle|AWSAdministratorAccess, AWSReadOnlyAccess|\r\n|PT Web Platform PO|AWSReadOnlyAccess|\r\n|Transport|AWSAdministratorAccess|\r\n|heiko.rothe@idealo.de|AWSPowerUserAccess|",
+              "customfield_17702": "||User/Group||Permissions||\r\n|Cloud Shuttle|AWSAdministratorAccess, AWSReadOnlyAccess|\r\n|PT Web Platform PO|AWSReadOnlyAccess|\r\n|Transport|AWSAdministratorAccess|\r\n|firstname.lastname@domain.com|AWSPowerUserAccess|",
               "customfield_18206": "[{\"value\":\"NEIN\"}]",
               "customfield_18207": "[{\"value\":\"NEIN\"}]",
               "customfield_18233": "\"180415024374\""
@@ -2398,7 +2398,7 @@
             "provisioned_product_name": "Test_Account_v4",
             "sso": [
               {
-                "email": "heiko.rothe@idealo.de",
+                "email": "firstname.lastname@domain.com",
                 "first_name": "Azure",
                 "last_name": "AD"
               }
@@ -2981,7 +2981,7 @@
             "provisioned_product_name": "VPC_IPAM_Test",
             "sso": [
               {
-                "email": "oleksii.kalinnikov@idealo.de",
+                "email": "firstname.lastname@domain.com",
                 "first_name": "Azure",
                 "last_name": "AD"
               }

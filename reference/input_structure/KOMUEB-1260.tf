@@ -12,8 +12,8 @@ module "komueb_1260_order_processing_production" {
   cost_center           = 1605
   komueb_product_ticket = "KOMUEB-1260"
 
-  owner_email         = "stefan.rudnitzki@idealo.de"
-  owner_jira_username = "stefan.rudnitzki"
+  owner_email         = "firstname.lastname@domain.com"
+  owner_jira_username = "firstname.lastname"
 
   personal_data_processed = true
   personal_data_stored    = true
@@ -38,8 +38,8 @@ module "komueb_1260_order_processing_staging" {
   cost_center           = 1605
   komueb_product_ticket = "KOMUEB-1260"
 
-  owner_email         = "stefan.rudnitzki@idealo.de"
-  owner_jira_username = "stefan.rudnitzki"
+  owner_email         = "firstname.lastname@domain.com"
+  owner_jira_username = "firstname.lastname"
 
   personal_data_processed = true
   personal_data_stored    = true

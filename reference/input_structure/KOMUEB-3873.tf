@@ -6,8 +6,8 @@ module "komueb_3873_domain_control" {
   cost_center           = 1187
   komueb_product_ticket = "KOMUEB-3873"
 
-  owner_email         = "heiko.rothe@idealo.de"
-  owner_jira_username = "heiko.rothe"
+  owner_email         = "firstname.lastname@domain.com"
+  owner_jira_username = "firstname.lastname"
 
   group_permissions = {
     "Cloud Shuttle" = ["AWSAdministratorAccess", "AWSReadOnlyAccess"]
@@ -22,8 +22,8 @@ module "komueb_3873_service_catalog_hub" {
   cost_center           = 1187
   komueb_product_ticket = "KOMUEB-3873"
 
-  owner_email         = "moritz.brettschneider@idealo.de"
-  owner_jira_username = "m.brettschneider"
+  owner_email         = "firstname.lastname@domain.com"
+  owner_jira_username = "firstname.lastname"
 
   group_permissions = {
     "Cloud Shuttle" = ["AWSAdministratorAccess"]
@@ -38,8 +38,8 @@ module "komueb_3873_aws_cost_management" {
   cost_center           = 1187
   komueb_product_ticket = "KOMUEB-3873"
 
-  owner_email         = "moritz.brettschneider@idealo.de"
-  owner_jira_username = "m.brettschneider"
+  owner_email         = "firstname.lastname@domain.com"
+  owner_jira_username = "firstname.lastname"
 
   group_permissions = {
     "Cloud Shuttle"   = [

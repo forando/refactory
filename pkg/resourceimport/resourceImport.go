@@ -140,7 +140,7 @@ func importResources(dir string, resources chan<- schema.ResourceCount, res chan
 
 	guard <- struct{}{} //would block if guard channel is already filled
 
-	terragrunt := shellexec.Terragrunt{Dir: dir}
+	terragrunt := shellexec.NewTerragrunt(dir)
 
 	if err := terragrunt.Init(); err != nil {
 		cleanErrors := filesystem.CleanDir(dir)

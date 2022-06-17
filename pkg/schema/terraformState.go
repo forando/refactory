@@ -28,9 +28,15 @@ type Instance struct {
 }
 
 type Attributes struct {
-	Id     string   `hcl:"id,attr"`
-	Bucket string   `hcl:"bucket,optional"`
-	Rest   hcl.Body `hcl:"rest,remain"`
+	Id                  string   `hcl:"id,attr"`
+	Bucket              string   `hcl:"bucket,optional"`
+	PeerCloudAccount    string   `hcl:"peer_cloud_account,optional"`
+	VpcId               *string  `hcl:"vpc_id,optional"`
+	PeerVpcId           *string  `hcl:"peer_vpc,optional"`
+	PeeringConnectionId *string  `hcl:"vpc_peering_connection_id,optional"`
+	IngressRuleNumber   int64    `hcl:"rule_number,optional"`
+	IngressToPort       int64    `hcl:"to_port,optional"`
+	Rest                hcl.Body `hcl:"rest,remain"`
 }
 
 type TfImport struct {
