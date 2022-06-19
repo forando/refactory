@@ -25,7 +25,7 @@ func main() {
 
 	flag.Usage = func() {
 		fmt.Printf("Usage of %s:\n", os.Args[0])
-		fmt.Println("refactory [FLAGS...] [bootstrap|import]")
+		fmt.Printf("%s [FLAGS...] [bootstrap|import]\n", os.Args[0])
 		fmt.Println("COMMANDS:")
 		fmt.Println("  bootstrap: bootstraps terragunt file structure from terraform files")
 		fmt.Println("  import: runs `terragunt import ...` command for each bootstrapped terragrunt module")
