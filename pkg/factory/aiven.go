@@ -72,7 +72,7 @@ func (t *AivenTerraform) bootstrap(rootBody *hclwrite.Body, consumers *[]schema.
 
 	rootBody.AppendNewline()
 
-	moduleBlock := rootBody.AppendNewBlock("module", []string{"peering_connection"})
+	moduleBlock := rootBody.AppendNewBlock("module", []string{schema.NewModuleDefaultName})
 	moduleBody := moduleBlock.Body()
 
 	moduleBody.SetAttributeValue("source", cty.StringVal("git@github.com:idealo/terraform-aiven-vpc-peering//modules/aiven-aws-peering-connections-acceptor?ref=v2.0.1"))

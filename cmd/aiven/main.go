@@ -241,7 +241,7 @@ func dryRunMode() bool {
 
 func getModuleName() string {
 	answer := goprompt.Input(
-		"What is the new module name? [peering_connections]: ",
+		fmt.Sprintf("What is the new module name? [%s]: ", schema.NewModuleDefaultName),
 		func(d goprompt.Document) []goprompt.Suggest {
 			return []goprompt.Suggest{}
 		},

@@ -5,6 +5,8 @@ const (
 	IngressUdp = "ingress_udp"
 )
 
+const NewModuleDefaultName = "peering_connections"
+
 type AivenProducerModule struct {
 	Name              string
 	PeeringConnection AivenVpcPeeringConnection
