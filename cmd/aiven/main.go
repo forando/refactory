@@ -287,10 +287,19 @@ func importConsumerStates(consumers *[]schema.AivenConsumerModule, tool *shellex
 			break
 		}
 
-		aclAddr := fmt.Sprintf("%s.%s", moduleName, consumer.AwsNetworkAclRules[schema.IngressUdp].Address)
-		if err := (*tool).StateImport(aclAddr, consumer.AwsNetworkAclRules[schema.IngressUdp].Id); err != nil {
+		aclTcpAddr := fmt.Sprintf("%s.%s", moduleName, consumer.AwsNetworkAclRules[schema.IngressTcp].Address)
+		if err := (*tool).StateImport(aclTcpAddr, consumer.AwsNetworkAclRules[schema.IngressTcp].Id); err != nil {
 			fmt.Println(err.Error())
 			(*tool).StateRemove(accepterAddr, false)
+			rollBack = true
+			break
+		}
+
+		aclUdpAddr := fmt.Sprintf("%s.%s", moduleName, consumer.AwsNetworkAclRules[schema.IngressUdp].Address)
+		if err := (*tool).StateImport(aclUdpAddr, consumer.AwsNetworkAclRules[schema.IngressUdp].Id); err != nil {
+			fmt.Println(err.Error())
+			(*tool).StateRemove(accepterAddr, false)
+			(*tool).StateRemove(aclUdpAddr, false)
 			rollBack = true
 			break
 		}
@@ -299,33 +308,36 @@ func importConsumerStates(consumers *[]schema.AivenConsumerModule, tool *shellex
 		for _, route := range consumer.AwsRoutResources {
 			if err := (*tool).StateImport(fmt.Sprintf("%s.%s", moduleName, route.Address), route.Id); err != nil {
 				fmt.Println(err.Error())
-				rollBack = true
-				break
+				fmt.Println("ROLLING BACK...")
+				(*tool).StateRemove(accepterAddr, false)
+				(*tool).StateRemove(aclTcpAddr, false)
+				(*tool).StateRemove(aclUdpAddr, false)
+				for _, route := range importedRoutes {
+					(*tool).StateRemove(fmt.Sprintf("%s.%s", moduleName, route.Address), false)
+				}
+				rollbackImportedConsumers(tool, importedConsumers, destPrefix)
+				return
 			}
 			importedRoutes = append(importedRoutes, &route)
 		}
-		if !rollBack {
-			importedConsumers = append(importedConsumers, &consumer)
-		} else {
-			fmt.Println("ROLLING BACK...")
-			(*tool).StateRemove(accepterAddr, false)
-			(*tool).StateRemove(aclAddr, false)
-			for _, route := range importedRoutes {
-				(*tool).StateRemove(fmt.Sprintf("%s.%s", moduleName, route.Address), false)
-			}
-			break
-		}
+
+		importedConsumers = append(importedConsumers, &consumer)
 	}
 	if rollBack {
-		for _, consumer := range importedConsumers {
-			moduleName := buildNewModuleName(consumer, destPrefix)
-			(*tool).StateRemove(fmt.Sprintf("%s.%s", moduleName, consumer.ConnectionAccepter.Address), false)
-			(*tool).StateRemove(fmt.Sprintf("%s.%s", moduleName, consumer.AwsNetworkAclRules[schema.IngressUdp].Address), false)
-			for _, route := range consumer.AwsRoutResources {
-				(*tool).StateRemove(fmt.Sprintf("%s.%s", moduleName, route.Address), false)
-			}
-		}
+		fmt.Println("ROLLING BACK...")
+		rollbackImportedConsumers(tool, importedConsumers, destPrefix)
+	}
+}
 
+func rollbackImportedConsumers(tool *shellexec.CmdRunner, importedConsumers []*schema.AivenConsumerModule, destPrefix string) {
+	for _, consumer := range importedConsumers {
+		moduleName := buildNewModuleName(consumer, destPrefix)
+		(*tool).StateRemove(fmt.Sprintf("%s.%s", moduleName, consumer.ConnectionAccepter.Address), false)
+		(*tool).StateRemove(fmt.Sprintf("%s.%s", moduleName, consumer.AwsNetworkAclRules[schema.IngressTcp].Address), false)
+		(*tool).StateRemove(fmt.Sprintf("%s.%s", moduleName, consumer.AwsNetworkAclRules[schema.IngressUdp].Address), false)
+		for _, route := range consumer.AwsRoutResources {
+			(*tool).StateRemove(fmt.Sprintf("%s.%s", moduleName, route.Address), false)
+		}
 	}
 }
 
