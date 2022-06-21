@@ -3,6 +3,7 @@ package parser
 import (
 	"fmt"
 	"github.com/forando/refactory/pkg/schema"
+	"github.com/hashicorp/hcl/v2/gohcl"
 	"github.com/pkg/errors"
 	"strings"
 )
@@ -18,7 +19,7 @@ const (
 type aivenCandidate struct {
 	moduleType                      ModuleType
 	aivenVpcPeeringConnection       *schema.AivenVpcPeeringConnection
-	awsRoutResources                *map[string]schema.AwsRoutResource
+	awsRoutResources                *map[string]schema.AwsRouteResource
 	awsNetworkAclRules              *map[string]schema.AwsNetworkAclRule
 	awsVpcPeeringConnectionAccepter *schema.AwsVpcPeeringConnectionAccepter
 }
@@ -106,15 +107,20 @@ func populateCandidate(candidate *aivenCandidate, resource *schema.Resource) err
 		if candidate.aivenVpcPeeringConnection != nil {
 			return resourceAlreadySet(resource.Module, resource.Type)
 		}
+		body := resource.Instances[0].Attrs.Rest
+		var connection schema.PeeringConnectionAttributes
+		if err := gohcl.DecodeBody(body, nil, &connection); err != nil {
+			return err
+		}
 		key := schema.Key{
 			Address: fmt.Sprintf("%s.%s", resource.Type, resource.Name),
 			Id:      resource.Instances[0].Attrs.Id,
 		}
 		candidate.aivenVpcPeeringConnection = &schema.AivenVpcPeeringConnection{
 			Key:               key,
-			AccountId:         resource.Instances[0].Attrs.PeerCloudAccount,
-			AivenProjectVpcId: *resource.Instances[0].Attrs.VpcId,
-			VpcId:             *resource.Instances[0].Attrs.PeerVpcId,
+			AccountId:         connection.PeerCloudAccount,
+			AivenProjectVpcId: connection.VpcId,
+			VpcId:             connection.PeerVpcId,
 		}
 		return nil
 	case awsVpcPeeringConnectionAccepter:
@@ -125,14 +131,19 @@ func populateCandidate(candidate *aivenCandidate, resource *schema.Resource) err
 		if candidate.awsVpcPeeringConnectionAccepter != nil {
 			return resourceAlreadySet(resource.Module, resource.Type)
 		}
+		body := resource.Instances[0].Attrs.Rest
+		var accepter schema.PeeringAccepterAttributes
+		if err := gohcl.DecodeBody(body, nil, &accepter); err != nil {
+			return err
+		}
 		key := schema.Key{
 			Address: fmt.Sprintf("%s.%s", resource.Type, resource.Name),
 			Id:      resource.Instances[0].Attrs.Id,
 		}
 		candidate.awsVpcPeeringConnectionAccepter = &schema.AwsVpcPeeringConnectionAccepter{
 			Key:                 key,
-			VpcId:               *resource.Instances[0].Attrs.VpcId,
-			PeeringConnectionId: *resource.Instances[0].Attrs.PeeringConnectionId,
+			VpcId:               accepter.VpcId,
+			PeeringConnectionId: accepter.PeeringConnectionId,
 		}
 		return nil
 	case awsNetworkAclRule:
@@ -155,18 +166,37 @@ func populateCandidate(candidate *aivenCandidate, resource *schema.Resource) err
 				resource.Name,
 			)
 		}
+		body := resource.Instances[0].Attrs.Rest
+		var ingress schema.IngressAttributes
+		if err := gohcl.DecodeBody(body, nil, &ingress); err != nil {
+			return err
+		}
+		protocol := ingress.IngressProtocol
+		if protocol == "17" {
+			protocol = "udp"
+		}
+		if protocol == "6" {
+			protocol = "tcp"
+		}
+		aclId := ingress.IngressNetworkAclId
+		ruleNumber := ingress.IngressRuleNumber
+		//egress := resource.Instances[0].Attrs.IngressEgress
+		id := fmt.Sprintf("%s:%d:%s:%t", aclId, ruleNumber, protocol, false)
 		key := schema.Key{
 			Address: fmt.Sprintf("%s.%s", resource.Type, resource.Name),
-			Id:      resource.Instances[0].Attrs.Id,
+			Id:      id,
 		}
 		rules[resource.Name] = schema.AwsNetworkAclRule{
-			Key:               key,
-			IngressRuleNumber: resource.Instances[0].Attrs.IngressRuleNumber,
-			IngressDenyToPort: resource.Instances[0].Attrs.IngressToPort,
+			Key:                 key,
+			IngressProtocol:     protocol,
+			IngressNetworkAclId: aclId,
+			IngressRuleNumber:   ruleNumber,
+			IngressDenyToPort:   ingress.IngressToPort,
+			IngressEgress:       false,
 		}
 		return nil
 	case awsRoute:
-		routes := make(map[string]schema.AwsRoutResource)
+		routes := make(map[string]schema.AwsRouteResource)
 		if candidate.awsRoutResources != nil {
 			routes = *candidate.awsRoutResources
 		}
@@ -183,12 +213,24 @@ func populateCandidate(candidate *aivenCandidate, resource *schema.Resource) err
 					instance.IndexKey,
 				)
 			}
+			body := resource.Instances[0].Attrs.Rest
+			var routeAttrs schema.RouteAttributes
+			if err := gohcl.DecodeBody(body, nil, &routeAttrs); err != nil {
+				return err
+			}
+			tableId := routeAttrs.RouteTableId
+			destinationCidrBlock := routeAttrs.RouteDestinationCidrBlock
+			id := fmt.Sprintf("%s_%s", tableId, destinationCidrBlock)
 			address := fmt.Sprintf("%s.%s[\"%s\"]", resource.Type, resource.Name, instance.IndexKey)
 			key := schema.Key{
 				Address: address,
-				Id:      resource.Instances[0].Attrs.Id,
+				Id:      id,
 			}
-			route := schema.AwsRoutResource{Key: key}
+			route := schema.AwsRouteResource{
+				Key:                       key,
+				RouteTableId:              tableId,
+				RouteDestinationCidrBlock: destinationCidrBlock,
+			}
 			routes[instance.IndexKey] = route
 		}
 		if candidate.awsRoutResources == nil {

@@ -147,6 +147,7 @@ func isIgnoredFile(name string) bool {
 
 func PrintPWD() {
 	dir, err := os.Getwd()
+
 	if err != nil {
 		log.Fatal(err)
 	}

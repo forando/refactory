@@ -16,39 +16,67 @@ import (
 
 func main() {
 
-	stateFileFlag := flag.String("state", "", "path to a tfState.json file")
-
 	flag.Usage = func() {
 		fmt.Printf("Usage of %s:\n", os.Args[0])
-		fmt.Printf("%s [FLAGS...]\n", os.Args[0])
+		fmt.Printf("%s [path/to/tfstate1.json path/to/tfstate2.json...]\n", os.Args[0])
 		fmt.Println("Running the program with no args would let you pull the tfState from remote.")
-		fmt.Println("It would also let you do state migration operations.")
-		fmt.Println("FLAGS:")
-		flag.PrintDefaults()
+		fmt.Println("It would also let you move resources withing the same state.")
 	}
 
 	flag.Parse()
 
+	states := flag.Args()
+
+	if len(states) > 0 {
+		goOfflinePath(states)
+	} else {
+		goOnlinePath()
+	}
+	println("\nBye :-)")
+}
+
+func goOfflinePath(states []string) {
+	var err error
+	var allConsumers []schema.AivenConsumerModule
+
+	for _, state := range states {
+		var producers *map[string]schema.AivenProducerModule
+		var consumers *map[string]schema.AivenConsumerModule
+		if producers, consumers, err = parser.ParseAivenStateFile(state); err != nil {
+			panic(err)
+		}
+		fmt.Printf("File %s:\n", state)
+		prettyprinter.PrintAivenResources(producers, consumers)
+		allConsumers = append(allConsumers, *getAllConsumers(producers, consumers)...)
+	}
+
+	toolName := getIacToolName()
+	if getApproval("Do you want to generate a new module?") {
+		newModulePath := getPathForNewModule()
+		aivenFactory := factory.NewAivenTerraform(newModulePath)
+		if err := aivenFactory.BootstrapNewModule(&allConsumers); err != nil {
+			panic(err)
+		}
+	}
+	var runner *shellexec.CmdRunner
+
+	if len(allConsumers) > 0 {
+		if getApproval("Do you want to import ConnectionAccepter resources?") {
+			projectPath := getProjectPath(toolName)
+			if runner == nil {
+				r := shellexec.GetCmdRunner(toolName, projectPath)
+				runner = &r
+			}
+			importConsumerStates(&allConsumers, runner)
+		}
+	}
+}
+
+func goOnlinePath() {
 	var err error
 	var producers *map[string]schema.AivenProducerModule
 	var consumers *map[string]schema.AivenConsumerModule
-	var allConsumers *map[string]schema.AivenConsumerModule
-
-	if len(*stateFileFlag) > 0 {
-		if producers, consumers, err = parser.ParseAivenStateFile(*stateFileFlag); err != nil {
-			panic(err)
-		}
-		prettyprinter.PrintAivenResources(producers, consumers)
-
-		allConsumers = getAllConsumers(producers, consumers)
-
-		if getApproval("Do you want to generate a new module?") {
-			dir := getPathForNewModule()
-			factory.BootstrapAivenModule(allConsumers, dir)
-		}
-		println("\nBye :-)")
-		return
-	}
+	var allConsumers []schema.AivenConsumerModule
 
 	println("Checking AWS Credentials...")
 	if parsed, err := shellexec.AwsGetCallerIdentity(); err != nil {
@@ -58,16 +86,15 @@ func main() {
 	}
 
 	toolName := getIacToolName()
-	path := getProjectPath(toolName)
+	projectPath := getProjectPath(toolName)
 
-	tool := getIaCTool(toolName, path)
+	runner := shellexec.GetCmdRunner(toolName, projectPath)
 
-	fmt.Printf("Initialazing %s...\n", tool.Name())
-	if err := tool.Init(); err != nil {
+	if err := runner.Init(); err != nil {
 		panic(err)
 	}
 	var bytes *[]byte
-	if bytes, err = tool.StatePull(); err != nil {
+	if bytes, err = runner.StatePull(); err != nil {
 		panic(err)
 	}
 
@@ -77,24 +104,30 @@ func main() {
 
 	prettyprinter.PrintAivenResources(producers, consumers)
 
-	allConsumers = getAllConsumers(producers, consumers)
+	allConsumers = *getAllConsumers(producers, consumers)
 
 	if getApproval("Do you want to generate a new module?") {
-		dir := getPathForNewModule()
-		factory.BootstrapAivenModule(allConsumers, dir)
+		newModulePath := getPathForNewModule()
+		aivenFactory := factory.NewAivenTerraform(newModulePath)
+		if err := aivenFactory.BootstrapNewModule(&allConsumers); err != nil {
+			panic(err)
+		}
 	}
 
 	println()
-	if getApproval("Do you want to remove aiven PeeringConnection Resources from the state?") {
-		removeProducerStates(producers, &tool)
+	if len(*producers) > 0 {
+		if getApproval("Do you want to remove aiven PeeringConnection Resources from the state?") {
+			removeProducerStates(producers, &runner)
+		}
 	}
 
-	fmt.Println("\nDo you want to move aiven ConnectionAccepter Resources to a new place?")
-	fmt.Println("Attention!!!\nYou must have the new module adopted and ready for this step.")
-	if getApproval("") {
-		moveConsumerStates(allConsumers, &tool)
+	if len(allConsumers) > 0 {
+		fmt.Println("\nDo you want to move aiven ConnectionAccepter Resources to a new place?")
+		fmt.Println("Attention!!!\nYou must have the new module adopted and ready for this step.")
+		if getApproval("") {
+			moveConsumerStates(&allConsumers, &runner)
+		}
 	}
-	println("\nBye :-)")
 }
 
 func getApproval(msg string) bool {
@@ -104,6 +137,7 @@ func getApproval(msg string) bool {
 			s := []goprompt.Suggest{
 				{Text: "yes"},
 				{Text: "no"},
+				{Text: "exit"},
 			}
 			return goprompt.FilterHasPrefix(s, d.GetWordBeforeCursor(), true)
 		},
@@ -111,6 +145,10 @@ func getApproval(msg string) bool {
 		goprompt.OptionCompletionOnDown(),
 	)
 
+	if answer == "exit" {
+		println("\nBye :-)")
+		os.Exit(0)
+	}
 	if strings.HasPrefix(answer, "y") {
 		return true
 	}
@@ -118,12 +156,13 @@ func getApproval(msg string) bool {
 }
 
 func getIacToolName() string {
-	tool := goprompt.Input(
+	answer := goprompt.Input(
 		"Select IaC tool [terraform]: ",
 		func(d goprompt.Document) []goprompt.Suggest {
 			s := []goprompt.Suggest{
 				{Text: "terraform"},
 				{Text: "terragrunt"},
+				{Text: "exit"},
 			}
 			return goprompt.FilterHasPrefix(s, d.GetWordBeforeCursor(), true)
 		},
@@ -131,10 +170,17 @@ func getIacToolName() string {
 		goprompt.OptionCompletionOnDown(),
 	)
 
-	if len(tool) == 0 || tool != "terragrunt" {
-		tool = "terraform"
+	if len(answer) == 0 {
+		answer = "terraform"
 	}
-	return tool
+	if answer == "exit" {
+		println("\nBye :-)")
+		os.Exit(0)
+	}
+	if answer != "terragrunt" && answer != "terraform" {
+		answer = "terraform"
+	}
+	return answer
 }
 
 func getProjectPath(tool string) string {
@@ -195,14 +241,14 @@ func dryRunMode() bool {
 
 func getModuleName() string {
 	answer := goprompt.Input(
-		"What is the new module name? [peering_connection]: ",
+		"What is the new module name? [peering_connections]: ",
 		func(d goprompt.Document) []goprompt.Suggest {
 			return []goprompt.Suggest{}
 		},
 	)
 
 	if len(answer) == 0 {
-		return "peering_connection"
+		return "peering_connections"
 	}
 	return answer
 }
@@ -217,14 +263,7 @@ var dirCompleter = completer.FilePathCompleter{
 	},
 }
 
-func getIaCTool(name string, path string) shellexec.IaC {
-	if name == "terragrunt" {
-		return shellexec.NewTerragrunt(path)
-	}
-	return shellexec.NewTerraform(path)
-}
-
-func removeProducerStates(producers *map[string]schema.AivenProducerModule, tool *shellexec.IaC) {
+func removeProducerStates(producers *map[string]schema.AivenProducerModule, tool *shellexec.CmdRunner) {
 	fmt.Println("Trying to remove ConnectionRequester Resources from the state:")
 	dryRun := dryRunMode()
 	for _, producer := range *producers {
@@ -235,7 +274,62 @@ func removeProducerStates(producers *map[string]schema.AivenProducerModule, tool
 	}
 }
 
-func moveConsumerStates(consumers *map[string]schema.AivenConsumerModule, tool *shellexec.IaC) {
+func importConsumerStates(consumers *[]schema.AivenConsumerModule, tool *shellexec.CmdRunner) {
+	destPrefix := getModuleName()
+	importedConsumers := make([]*schema.AivenConsumerModule, 0)
+	rollBack := false
+	for _, consumer := range *consumers {
+		moduleName := buildNewModuleName(&consumer, destPrefix)
+		accepterAddr := fmt.Sprintf("%s.%s", moduleName, consumer.ConnectionAccepter.Address)
+		if err := (*tool).StateImport(accepterAddr, consumer.ConnectionAccepter.Id); err != nil {
+			fmt.Println(err.Error())
+			rollBack = true
+			break
+		}
+
+		aclAddr := fmt.Sprintf("%s.%s", moduleName, consumer.AwsNetworkAclRules[schema.IngressUdp].Address)
+		if err := (*tool).StateImport(aclAddr, consumer.AwsNetworkAclRules[schema.IngressUdp].Id); err != nil {
+			fmt.Println(err.Error())
+			(*tool).StateRemove(accepterAddr, false)
+			rollBack = true
+			break
+		}
+
+		importedRoutes := make([]*schema.AwsRouteResource, 0)
+		for _, route := range consumer.AwsRoutResources {
+			if err := (*tool).StateImport(fmt.Sprintf("%s.%s", moduleName, route.Address), route.Id); err != nil {
+				fmt.Println(err.Error())
+				rollBack = true
+				break
+			}
+			importedRoutes = append(importedRoutes, &route)
+		}
+		if !rollBack {
+			importedConsumers = append(importedConsumers, &consumer)
+		} else {
+			fmt.Println("ROLLING BACK...")
+			(*tool).StateRemove(accepterAddr, false)
+			(*tool).StateRemove(aclAddr, false)
+			for _, route := range importedRoutes {
+				(*tool).StateRemove(fmt.Sprintf("%s.%s", moduleName, route.Address), false)
+			}
+			break
+		}
+	}
+	if rollBack {
+		for _, consumer := range importedConsumers {
+			moduleName := buildNewModuleName(consumer, destPrefix)
+			(*tool).StateRemove(fmt.Sprintf("%s.%s", moduleName, consumer.ConnectionAccepter.Address), false)
+			(*tool).StateRemove(fmt.Sprintf("%s.%s", moduleName, consumer.AwsNetworkAclRules[schema.IngressUdp].Address), false)
+			for _, route := range consumer.AwsRoutResources {
+				(*tool).StateRemove(fmt.Sprintf("%s.%s", moduleName, route.Address), false)
+			}
+		}
+
+	}
+}
+
+func moveConsumerStates(consumers *[]schema.AivenConsumerModule, tool *shellexec.CmdRunner) {
 	fmt.Println("Trying to move ConnectionAcceptor Resources to a new location:")
 	var src, dest string
 	dryRun := dryRunMode()
@@ -272,17 +366,20 @@ func moveConsumerStates(consumers *map[string]schema.AivenConsumerModule, tool *
 
 func buildNewModuleName(consumer *schema.AivenConsumerModule, prefix string) string {
 	key := fmt.Sprintf("%s/%s", consumer.ConnectionAccepter.VpcId, consumer.ConnectionAccepter.PeeringConnectionId)
-	return fmt.Sprintf("modue.%s[%q]", prefix, key)
+	if strings.HasPrefix(prefix, "module") {
+		return fmt.Sprintf("%s[%q]", prefix, key)
+	}
+	return fmt.Sprintf("module.%s[%q]", prefix, key)
 }
 
-func getAllConsumers(producers *map[string]schema.AivenProducerModule, consumers *map[string]schema.AivenConsumerModule) *map[string]schema.AivenConsumerModule {
-	allConsumers := make(map[string]schema.AivenConsumerModule)
-	for key, c := range *consumers {
-		allConsumers[key] = c
+func getAllConsumers(producers *map[string]schema.AivenProducerModule, consumers *map[string]schema.AivenConsumerModule) *[]schema.AivenConsumerModule {
+	allConsumers := make([]schema.AivenConsumerModule, 0)
+	for _, c := range *consumers {
+		allConsumers = append(allConsumers, c)
 	}
 	for _, p := range *producers {
 		if p.Consumer != nil {
-			allConsumers[p.Consumer.Name] = *p.Consumer
+			allConsumers = append(allConsumers, *p.Consumer)
 		}
 	}
 	return &allConsumers

@@ -20,15 +20,18 @@ type AivenVpcPeeringConnection struct {
 
 type AivenConsumerModule struct {
 	Name               string
-	AwsRoutResources   map[string]AwsRoutResource
+	AwsRoutResources   map[string]AwsRouteResource
 	AwsNetworkAclRules map[string]AwsNetworkAclRule
 	ConnectionAccepter AwsVpcPeeringConnectionAccepter
 }
 
 type AwsNetworkAclRule struct {
 	Key
-	IngressRuleNumber int64
-	IngressDenyToPort int64
+	IngressProtocol     string
+	IngressNetworkAclId string
+	IngressRuleNumber   int64
+	IngressDenyToPort   int64
+	IngressEgress       bool
 }
 
 type AwsVpcPeeringConnectionAccepter struct {
@@ -37,8 +40,10 @@ type AwsVpcPeeringConnectionAccepter struct {
 	PeeringConnectionId string
 }
 
-type AwsRoutResource struct {
+type AwsRouteResource struct {
 	Key
+	RouteTableId              string
+	RouteDestinationCidrBlock string
 }
 
 type Key struct {

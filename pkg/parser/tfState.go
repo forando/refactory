@@ -9,8 +9,7 @@ import (
 
 func parseTfStateFile(file string) (*schema.TerraformState, error) {
 	var state schema.TerraformState
-	err := hclsimple.DecodeFile(file, nil, &state)
-	if err != nil {
+	if err := hclsimple.DecodeFile(file, nil, &state); err != nil {
 		return nil, err
 	}
 	return &state, nil
@@ -18,8 +17,7 @@ func parseTfStateFile(file string) (*schema.TerraformState, error) {
 
 func parseTfStateBytes(bytes *[]byte) (*schema.TerraformState, error) {
 	var state schema.TerraformState
-	err := hclsimple.Decode("dummy.json", *bytes, nil, &state)
-	if err != nil {
+	if err := hclsimple.Decode("dummy.json", *bytes, nil, &state); err != nil {
 		return nil, err
 	}
 	return &state, nil

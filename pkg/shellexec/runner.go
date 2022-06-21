@@ -9,6 +9,20 @@ import (
 	"os/exec"
 )
 
+type CmdRunner interface {
+	Init() error
+	StatePull() (*[]byte, error)
+	StateList() (*[]string, error)
+	StateMove(src string, dest string, dryRun bool) error
+	StateImport(address string, id string) error
+	StateRemove(address string, dryRun bool) error
+}
+
+type iacTool struct {
+	Name string
+	Dir  string
+}
+
 type OutPutType int
 
 const (
@@ -21,19 +35,22 @@ type OutPut struct {
 	Bytes []byte
 }
 
-type CmdRunner struct {
-	Dir string
+func GetCmdRunner(name string, path string) CmdRunner {
+	if name == "terragrunt" {
+		return NewTerragrunt(path)
+	}
+	return NewTerraform(path)
 }
 
-func (r *CmdRunner) Run(name string, args ...string) error {
+func (t *iacTool) Run(name string, args ...string) error {
 	cmd := exec.Command(name, args...)
-	cmd.Dir = r.Dir
+	cmd.Dir = t.Dir
 	return cmd.Run()
 }
 
-func (r *CmdRunner) RunWitStdOutput(name string, args ...string) (*[]byte, error) {
+func (t *iacTool) RunWitStdOutput(name string, args ...string) (*[]byte, error) {
 	cmd := exec.Command(name, args...)
-	cmd.Dir = r.Dir
+	cmd.Dir = t.Dir
 
 	output, err := cmd.Output()
 	if err != nil {
@@ -45,9 +62,9 @@ func (r *CmdRunner) RunWitStdOutput(name string, args ...string) (*[]byte, error
 	return &output, nil
 }
 
-func (r *CmdRunner) RunWithCombinedOutput(name string, args ...string) (*[]byte, error) {
+func (t *iacTool) RunWithCombinedOutput(name string, args ...string) (*[]byte, error) {
 	cmd := exec.Command(name, args...)
-	cmd.Dir = r.Dir
+	cmd.Dir = t.Dir
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		if output != nil {
@@ -58,14 +75,14 @@ func (r *CmdRunner) RunWithCombinedOutput(name string, args ...string) (*[]byte,
 	return &output, nil
 }
 
-func (r *CmdRunner) RunWithOutputChannel(ch chan<- *OutPut, name string, args ...string) {
+func (t *iacTool) RunWithOutputChannel(ch chan<- *OutPut, name string, args ...string) {
 	go func() {
 		cmd := exec.Command(name, args...)
-		cmd.Dir = r.Dir
+		cmd.Dir = t.Dir
 		var err error
 		stdout, err := cmd.StdoutPipe()
 		if err != nil {
-			r.sendError(ch, err.Error())
+			t.sendError(ch, err.Error())
 			close(ch)
 			return
 		}
@@ -86,7 +103,7 @@ func (r *CmdRunner) RunWithOutputChannel(ch chan<- *OutPut, name string, args ..
 		}(reader, ch)
 
 		if err := cmd.Start(); err != nil {
-			r.sendError(ch, err.Error())
+			t.sendError(ch, err.Error())
 			close(ch)
 			return
 		}
@@ -96,16 +113,16 @@ func (r *CmdRunner) RunWithOutputChannel(ch chan<- *OutPut, name string, args ..
 			if len(stderrBuf.Bytes()) > 0 {
 				errMsg = string(stderrBuf.Bytes())
 			}
-			r.sendError(ch, errMsg)
+			t.sendError(ch, errMsg)
 		}
 		close(ch)
 	}()
 }
 
-func (r *CmdRunner) sendError(ch chan<- *OutPut, errMsg string) {
+func (t *iacTool) sendError(ch chan<- *OutPut, errMsg string) {
 	out := OutPut{
 		Type:  StdError,
-		Bytes: []byte(fmt.Sprintf("Dir: %s, error: %s", r.Dir, errMsg)),
+		Bytes: []byte(fmt.Sprintf("Dir: %s, error: %s", t.Dir, errMsg)),
 	}
 	ch <- &out
 }

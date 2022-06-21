@@ -5,32 +5,51 @@ import (
 	"github.com/forando/refactory/pkg/schema"
 	"github.com/hashicorp/hcl/v2/hclsyntax"
 	"github.com/hashicorp/hcl/v2/hclwrite"
+	"github.com/pkg/errors"
 	"github.com/zclconf/go-cty/cty"
-	"log"
 	"os"
 	"path/filepath"
 )
 
-func BootstrapAivenModule(consumers *map[string]schema.AivenConsumerModule, dir string) {
+type AivenTerraform struct {
+	Name string
+	Dir  string
+}
 
-	//length := len(*consumers)
+func NewAivenTerraform(dir string) *AivenTerraform {
+	return &AivenTerraform{Name: "terraform", Dir: dir}
+}
+
+func (t *AivenTerraform) BootstrapNewModule(consumers *[]schema.AivenConsumerModule) error {
+
 	const terragruntFileNme = "aiven_peering_verbose.tf"
-	filePath := filepath.Join(dir, terragruntFileNme)
+	filePath := filepath.Join(t.Dir, terragruntFileNme)
 
 	fw, osErr := os.Create(filePath)
 
 	if osErr != nil {
-		log.Fatal("Cannot create new file ", osErr)
+		return osErr
 	}
 
 	newFile := hclwrite.NewEmptyFile()
 	rootBody := newFile.Body()
 
+	t.bootstrap(rootBody, consumers)
+
+	if _, err := newFile.WriteTo(fw); err != nil {
+		return errors.WithMessage(err, "Cannot write to the new file ")
+	}
+	fmt.Printf("A new module was created at %s\n", filePath)
+	fmt.Println("Please have a look and adjust it according to your needs.")
+
+	return nil
+}
+
+func (t *AivenTerraform) bootstrap(rootBody *hclwrite.Body, consumers *[]schema.AivenConsumerModule) {
 	localsBlock := rootBody.AppendNewBlock("locals", nil)
 	localsBody := localsBlock.Body()
 
 	peeringConnections := make([]cty.Value, 0)
-	//var vpcId string
 	for _, consumer := range *consumers {
 		tcpRule := consumer.AwsNetworkAclRules[schema.IngressTcp]
 		udpRule := consumer.AwsNetworkAclRules[schema.IngressUdp]
@@ -44,23 +63,19 @@ func BootstrapAivenModule(consumers *map[string]schema.AivenConsumerModule, dir 
 		}
 
 		peeringConnections = append(peeringConnections, cty.ObjectVal(entries))
-		//vpcId = consumer.ConnectionAccepter.VpcId
 	}
 	if len(peeringConnections) > 0 {
 		localsBody.SetAttributeValue("vpc_peering_connections", cty.ListVal(peeringConnections))
 	} else {
 		localsBody.SetAttributeValue("vpc_peering_connections", cty.ListValEmpty(cty.String))
 	}
-	//localsBody.SetAttributeValue("vpc_id", cty.StringVal(vpcId))
 
 	rootBody.AppendNewline()
 
 	moduleBlock := rootBody.AppendNewBlock("module", []string{"peering_connection"})
 	moduleBody := moduleBlock.Body()
 
-	moduleBody.SetAttributeValue("source", cty.StringVal("git@github.com:idealo/terraform-aiven-vpc-peering//modules/aiven-aws-peering-connections-acceptor?ref=v2.0.0"))
-
-	//for_each = { for connection in local.vpc_peering_connections : "${local.vpc_id}/${connection.id}" => connection }
+	moduleBody.SetAttributeValue("source", cty.StringVal("git@github.com:idealo/terraform-aiven-vpc-peering//modules/aiven-aws-peering-connections-acceptor?ref=v2.0.1"))
 
 	moduleBody.SetAttributeRaw("for_each", hclwrite.Tokens{
 		{Type: hclsyntax.TokenStringLit, Bytes: []byte(" { for connection in local.vpc_peering_connections : ")},
@@ -88,10 +103,4 @@ func BootstrapAivenModule(consumers *map[string]schema.AivenConsumerModule, dir 
 	moduleBody.SetAttributeRaw("aws_nacl_ingress_deny_to_port", hclwrite.Tokens{
 		{Type: hclsyntax.TokenStringLit, Bytes: []byte(" each.value.aws_nacl_ingress_deny_to_port")},
 	})
-
-	if _, err := newFile.WriteTo(fw); err != nil {
-		log.Fatal("Cannot write to the new file ", err)
-	}
-	fmt.Printf("A new module was created at %s\n", filePath)
-	fmt.Println("Please have a look and adjust it according to your needs.")
 }

@@ -28,15 +28,37 @@ type Instance struct {
 }
 
 type Attributes struct {
-	Id                  string   `hcl:"id,attr"`
-	Bucket              string   `hcl:"bucket,optional"`
-	PeerCloudAccount    string   `hcl:"peer_cloud_account,optional"`
-	VpcId               *string  `hcl:"vpc_id,optional"`
-	PeerVpcId           *string  `hcl:"peer_vpc,optional"`
-	PeeringConnectionId *string  `hcl:"vpc_peering_connection_id,optional"`
+	Id     string   `hcl:"id,attr"`
+	Bucket string   `hcl:"bucket,optional"`
+	Rest   hcl.Body `hcl:"rest,remain"`
+}
+
+type IngressAttributes struct {
+	IngressProtocol     string   `hcl:"protocol,optional"`
+	IngressNetworkAclId string   `hcl:"network_acl_id,optional"`
 	IngressRuleNumber   int64    `hcl:"rule_number,optional"`
 	IngressToPort       int64    `hcl:"to_port,optional"`
+	IngressEgress       bool     `hcl:"egress,optional"`
 	Rest                hcl.Body `hcl:"rest,remain"`
+}
+
+type RouteAttributes struct {
+	RouteDestinationCidrBlock string   `hcl:"destination_cidr_block,optional"`
+	RouteTableId              string   `hcl:"route_table_id,optional"`
+	Rest                      hcl.Body `hcl:"rest,remain"`
+}
+
+type PeeringAccepterAttributes struct {
+	VpcId               string   `hcl:"vpc_id,optional"`
+	PeeringConnectionId string   `hcl:"vpc_peering_connection_id,optional"`
+	Rest                hcl.Body `hcl:"rest,remain"`
+}
+
+type PeeringConnectionAttributes struct {
+	VpcId            string   `hcl:"vpc_id,optional"`
+	PeerVpcId        string   `hcl:"peer_vpc,optional"`
+	PeerCloudAccount string   `hcl:"peer_cloud_account,optional"`
+	Rest             hcl.Body `hcl:"rest,remain"`
 }
 
 type TfImport struct {

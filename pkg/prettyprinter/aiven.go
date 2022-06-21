@@ -12,10 +12,10 @@ func PrintAivenResources(producers *map[string]schema.AivenProducerModule, consu
 		fmt.Printf("Producders: %d\n", len(*producers))
 		for _, producer := range *producers {
 			fmt.Printf("  Module: %s\n", producer.Name)
-			fmt.Printf("  |__PeeringConnection\n")
+			fmt.Printf("  |__PeeringConnection (Must be removed from the state)\n")
 			if producer.Consumer != nil {
 				printProducer(&producer, "  |  ")
-				fmt.Printf("  |__ConnectionAccepter Resources:\n")
+				fmt.Printf("  |__ConnectionAccepter Resources (Must be moved to a new address):\n")
 				printConsumer(producer.Consumer, "     ")
 			} else {
 				printProducer(&producer, "     ")
@@ -42,12 +42,12 @@ func printProducer(producer *schema.AivenProducerModule, prefix string) {
 
 func printConsumer(consumer *schema.AivenConsumerModule, indent string) {
 	fmt.Printf("%sModule: %s\n", indent, consumer.Name)
-	fmt.Printf("%s|__ConnectionAccepter\n", indent)
+	fmt.Printf("%s|__ConnectionAccepter (Must be moved to a new address)\n", indent)
 	fmt.Printf("%s|  |__Id: %s\n", indent, consumer.ConnectionAccepter.Id)
 	fmt.Printf("%s|  |__Address: %s\n", indent, consumer.ConnectionAccepter.Address)
 	fmt.Printf("%s|  |__VpcId: %s\n", indent, consumer.ConnectionAccepter.VpcId)
 	fmt.Printf("%s|  |__PeeringConnectionId: %s\n", indent, consumer.ConnectionAccepter.PeeringConnectionId)
-	fmt.Printf("%s|__AwsNetworkAclRules:\n", indent)
+	fmt.Printf("%s|__AwsNetworkAclRules (Must be moved to a new address):\n", indent)
 	index := 0
 	for key, val := range consumer.AwsNetworkAclRules {
 		fmt.Printf("%s|   |_____%s:\n", indent, key)
@@ -64,7 +64,7 @@ func printConsumer(consumer *schema.AivenConsumerModule, indent string) {
 		}
 		index++
 	}
-	fmt.Printf("%s|__AwsRoutResources:\n", indent)
+	fmt.Printf("%s|__AwsRoutResources (Must be moved to a new address):\n", indent)
 	for key, val := range consumer.AwsRoutResources {
 		fmt.Printf("%s    |_____%s {Id: %s, Address: %s}\n", indent, key, val.Id, val.Address)
 	}
