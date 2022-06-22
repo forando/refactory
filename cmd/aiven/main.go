@@ -5,6 +5,7 @@ import (
 	"fmt"
 	goprompt "github.com/c-bata/go-prompt"
 	"github.com/c-bata/go-prompt/completer"
+	"github.com/fatih/color"
 	"github.com/forando/refactory/pkg/factory"
 	"github.com/forando/refactory/pkg/parser"
 	"github.com/forando/refactory/pkg/prettyprinter"
@@ -36,21 +37,25 @@ func main() {
 }
 
 func goOfflinePath(states []string) {
-	var err error
 	var allConsumers []schema.AivenConsumerModule
-
+	consumersByKey := make(map[string][]schema.ConflictingConsumer)
+	println()
 	for _, state := range states {
+		var err error
 		var producers *map[string]schema.AivenProducerModule
 		var consumers *map[string]schema.AivenConsumerModule
 		if producers, consumers, err = parser.ParseAivenStateFile(state); err != nil {
 			panic(err)
 		}
-		fmt.Printf("File %s:\n", state)
+		populateConsumersByKey(&consumersByKey, producers, consumers)
+		green := color.New(color.FgGreen).SprintFunc()
+		fmt.Printf("File %s:\n", green(state))
 		prettyprinter.PrintAivenResources(producers, consumers)
 		allConsumers = append(allConsumers, *getAllConsumers(producers, consumers)...)
 	}
 
-	toolName := getIacToolName()
+	duplicatesFound := checkConsumersForDuplicates(consumersByKey)
+
 	if getApproval("Do you want to generate a new module?") {
 		newModulePath := getPathForNewModule()
 		aivenFactory := factory.NewAivenTerraform(newModulePath)
@@ -58,17 +63,34 @@ func goOfflinePath(states []string) {
 			panic(err)
 		}
 	}
-	var runner *shellexec.CmdRunner
+
+	if duplicatesFound {
+		return
+	}
 
 	if len(allConsumers) > 0 {
-		if getApproval("Do you want to import ConnectionAccepter resources?") {
-			projectPath := getProjectPath(toolName)
-			if runner == nil {
-				r := shellexec.GetCmdRunner(toolName, projectPath)
-				runner = &r
-			}
-			importConsumerStates(&allConsumers, runner)
+		if !getApproval("Do you want to import ConnectionAccepter resources?") {
+			return
 		}
+		checkAws()
+		toolName := getIacToolName()
+		projectPath := getProjectPath(toolName)
+		runner := shellexec.GetCmdRunner(toolName, projectPath)
+		if err := runner.Init(); err != nil {
+			panic(err)
+		}
+
+		stateBytes := pullState(runner)
+
+		if producers, consumers, err := parser.ParseAivenStateBytes(stateBytes); err != nil {
+			panic(err)
+		} else {
+			populateConsumersByKey(&consumersByKey, producers, consumers)
+			if checkConsumersForDuplicates(consumersByKey) {
+				return
+			}
+		}
+		importConsumerStates(&allConsumers, &runner)
 	}
 }
 
@@ -78,12 +100,7 @@ func goOnlinePath() {
 	var consumers *map[string]schema.AivenConsumerModule
 	var allConsumers []schema.AivenConsumerModule
 
-	println("Checking AWS Credentials...")
-	if parsed, err := shellexec.AwsGetCallerIdentity(); err != nil {
-		panic(err)
-	} else {
-		fmt.Printf("AWS Account: %s\n", parsed.Account)
-	}
+	checkAws()
 
 	toolName := getIacToolName()
 	projectPath := getProjectPath(toolName)
@@ -93,12 +110,10 @@ func goOnlinePath() {
 	if err := runner.Init(); err != nil {
 		panic(err)
 	}
-	var bytes *[]byte
-	if bytes, err = runner.StatePull(); err != nil {
-		panic(err)
-	}
 
-	if producers, consumers, err = parser.ParseAivenStateBytes(bytes); err != nil {
+	stateBytes := pullState(runner)
+
+	if producers, consumers, err = parser.ParseAivenStateBytes(stateBytes); err != nil {
 		panic(err)
 	}
 
@@ -127,6 +142,41 @@ func goOnlinePath() {
 		if getApproval("") {
 			moveConsumerStates(&allConsumers, &runner)
 		}
+	}
+}
+
+func checkAws() {
+	println("Checking AWS Credentials...")
+	if parsed, err := shellexec.AwsGetCallerIdentity(); err != nil {
+		panic(err)
+	} else {
+		fmt.Printf("AWS Account: %s\n", parsed.Account)
+	}
+}
+
+func checkConsumersForDuplicates(consumersByKey map[string][]schema.ConflictingConsumer) bool {
+	duplicatesFound := false
+	for key, consumers := range consumersByKey {
+		if len(consumers) > 1 {
+			duplicatesFound = true
+			magenta := color.New(color.FgMagenta).SprintFunc()
+			cyan := color.New(color.FgCyan).SprintFunc()
+			fmt.Printf("%s Consumers with clashing keys found!\n", magenta("WARNING:"))
+			fmt.Printf("%s(vpcID/PeeringConnectionId) = %s:\n", cyan("Key"), cyan(key))
+			for _, c := range consumers {
+				fmt.Printf("%s.%s\n", c.Module, c.Address)
+			}
+			println()
+		}
+	}
+	return duplicatesFound
+}
+
+func pullState(runner shellexec.CmdRunner) *[]byte {
+	if bytes, err := runner.StatePull(); err != nil {
+		panic(err)
+	} else {
+		return bytes
 	}
 }
 
@@ -308,7 +358,7 @@ func importConsumerStates(consumers *[]schema.AivenConsumerModule, tool *shellex
 		for _, route := range consumer.AwsRoutResources {
 			if err := (*tool).StateImport(fmt.Sprintf("%s.%s", moduleName, route.Address), route.Id); err != nil {
 				fmt.Println(err.Error())
-				fmt.Println("ROLLING BACK...")
+				color.Magenta("ROLLING BACK...")
 				(*tool).StateRemove(accepterAddr, false)
 				(*tool).StateRemove(aclTcpAddr, false)
 				(*tool).StateRemove(aclUdpAddr, false)
@@ -324,7 +374,7 @@ func importConsumerStates(consumers *[]schema.AivenConsumerModule, tool *shellex
 		importedConsumers = append(importedConsumers, &consumer)
 	}
 	if rollBack {
-		fmt.Println("ROLLING BACK...")
+		color.Magenta("ROLLING BACK...")
 		rollbackImportedConsumers(tool, importedConsumers, destPrefix)
 	}
 }
@@ -395,4 +445,41 @@ func getAllConsumers(producers *map[string]schema.AivenProducerModule, consumers
 		}
 	}
 	return &allConsumers
+}
+
+func populateConsumersByKey(consumersByKey *map[string][]schema.ConflictingConsumer, producers *map[string]schema.AivenProducerModule, consumers *map[string]schema.AivenConsumerModule) {
+	for _, p := range *producers {
+		consumer := p.Consumer
+		if consumer == nil {
+			continue
+		}
+		key := fmt.Sprintf("%s/%s", consumer.ConnectionAccepter.VpcId, consumer.ConnectionAccepter.PeeringConnectionId)
+		var keyConflicts []schema.ConflictingConsumer
+		var found bool
+		if keyConflicts, found = (*consumersByKey)[key]; !found {
+			keyConflicts = make([]schema.ConflictingConsumer, 0)
+		}
+		keyConflicts = append(keyConflicts, schema.ConflictingConsumer{
+			Module:              p.Name,
+			Address:             consumer.ConnectionAccepter.Address,
+			VpcId:               consumer.ConnectionAccepter.VpcId,
+			PeeringConnectionId: consumer.ConnectionAccepter.PeeringConnectionId,
+		})
+		(*consumersByKey)[key] = keyConflicts
+	}
+	for _, c := range *consumers {
+		key := fmt.Sprintf("%s/%s", c.ConnectionAccepter.VpcId, c.ConnectionAccepter.PeeringConnectionId)
+		var keyConflicts []schema.ConflictingConsumer
+		var found bool
+		if keyConflicts, found = (*consumersByKey)[key]; !found {
+			keyConflicts = make([]schema.ConflictingConsumer, 0)
+		}
+		keyConflicts = append(keyConflicts, schema.ConflictingConsumer{
+			Module:              c.Name,
+			Address:             c.ConnectionAccepter.Address,
+			VpcId:               c.ConnectionAccepter.VpcId,
+			PeeringConnectionId: c.ConnectionAccepter.PeeringConnectionId,
+		})
+		(*consumersByKey)[key] = keyConflicts
+	}
 }

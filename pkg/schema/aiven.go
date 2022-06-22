@@ -52,3 +52,10 @@ type Key struct {
 	Address string
 	Id      string
 }
+
+type ConflictingConsumer struct {
+	Module              string
+	Address             string
+	VpcId               string
+	PeeringConnectionId string
+}

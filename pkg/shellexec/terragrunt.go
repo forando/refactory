@@ -2,6 +2,7 @@ package shellexec
 
 import (
 	"fmt"
+	"github.com/fatih/color"
 	"github.com/forando/refactory/pkg/schema"
 	"github.com/pkg/errors"
 )
@@ -50,10 +51,10 @@ func (t *Terragrunt) StateList() (*[]string, error) {
 func (t *Terragrunt) StateRemove(address string, dryRun bool) error {
 	data := make(chan *OutPut)
 	if dryRun {
-		fmt.Printf("%s state rm --dry-run %q\n", t.Name, address)
+		color.Cyan("%s state rm --dry-run %q\n", t.Name, address)
 		t.RunWithOutputChannel(data, t.Name, "state", "rm", "-dry-run", address)
 	} else {
-		fmt.Printf("%s state rm %q\n", t.Name, address)
+		color.Cyan("%s state rm %q\n", t.Name, address)
 		t.RunWithOutputChannel(data, t.Name, "state", "rm", address)
 	}
 	resources := make([]string, 0)
@@ -71,10 +72,10 @@ func (t *Terragrunt) StateRemove(address string, dryRun bool) error {
 func (t *Terragrunt) StateMove(src string, dest string, dryRun bool) error {
 	data := make(chan *OutPut)
 	if dryRun {
-		fmt.Printf("%s state mv --dry-run %q %q\n", t.Name, src, dest)
+		color.Cyan("%s state mv --dry-run %q %q\n", t.Name, src, dest)
 		t.RunWithOutputChannel(data, t.Name, "state", "mv", "-dry-run", src, dest)
 	} else {
-		fmt.Printf("%s state mv %q %q\n", t.Name, src, dest)
+		color.Cyan("%s state mv %q %q\n", t.Name, src, dest)
 		t.RunWithOutputChannel(data, t.Name, "state", "mv", src, dest)
 	}
 	resources := make([]string, 0)
@@ -91,7 +92,7 @@ func (t *Terragrunt) StateMove(src string, dest string, dryRun bool) error {
 
 func (t *Terragrunt) StateImport(address string, id string) error {
 	data := make(chan *OutPut)
-	fmt.Printf("%s import %q %q\n", t.Name, address, id)
+	color.Cyan("%s import %q %q\n", t.Name, address, id)
 	t.RunWithOutputChannel(data, t.Name, "import", address, id)
 	resources := make([]string, 0)
 	for output := range data {

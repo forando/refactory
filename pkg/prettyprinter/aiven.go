@@ -2,12 +2,12 @@ package prettyprinter
 
 import (
 	"fmt"
+	"github.com/fatih/color"
 	"github.com/forando/refactory/pkg/schema"
 )
 
 func PrintAivenResources(producers *map[string]schema.AivenProducerModule, consumers *map[string]schema.AivenConsumerModule) {
-
-	fmt.Printf("producers: %d, consumers: %d\n", len(*producers), len(*consumers))
+	color.Cyan("producers: %d, consumers: %d\n", len(*producers), len(*consumers))
 	if len(*producers) > 0 {
 		fmt.Printf("Producders: %d\n", len(*producers))
 		for _, producer := range *producers {
