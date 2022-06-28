@@ -36,7 +36,7 @@ This way you'll be prompted to import resources from those files into your curre
 The problem is that terragrunt splits the project into multiple states (one terraform.tfstate file for each new module).
 That means that instead of moving the resources within *the same state* you would have to drop them in the current state and *reimport* them *into the new module state*.
 
-- Run terragrunt `state pull > path/to/terraform.tfstate` from within an old terragrunt configuration folder
+- Run `terragrunt state pull > path/to/terraform.tfstate` from within an old terragrunt configuration folder
 - Run `./aiven path/to/terraform.tfstate` and follow the prompt guide all the way down to the new module generation and hit exit afterwards
 - This new module is in terraform format so, using the data from it, you would need to make a valid terragrunt module and configuration
 - Rerun `./aiven path/to/terraform.tfstate` (do not generate a new module again) and proceed with importing resources into the new state
