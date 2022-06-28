@@ -201,16 +201,20 @@ func populateCandidate(candidate *aivenCandidate, resource *schema.Resource) err
 			routes = *candidate.awsRoutResources
 		}
 		for _, instance := range resource.Instances {
-			if len(instance.IndexKey) == 0 {
-				//return errors.Errorf("module: %s of type: %s does not have index_key property", resource.Module, resource.Type)
+			var indexedInstance schema.IndexedInstance
+			if err := gohcl.DecodeBody(instance.Rest, nil, &indexedInstance); err != nil {
+				return err
+			}
+			if len(indexedInstance.IndexKey) == 0 {
 				return nil
 			}
-			if _, found := routes[instance.IndexKey]; found {
+			indexKey := fmt.Sprintf("%s/%s", resource.Name, indexedInstance.IndexKey)
+			if _, found := routes[indexKey]; found {
 				return errors.Errorf(
 					"module: %s of type: %s already hase instance object with index_key = %s",
 					resource.Module,
 					resource.Type,
-					instance.IndexKey,
+					indexedInstance.IndexKey,
 				)
 			}
 			body := resource.Instances[0].Attrs.Rest
@@ -221,7 +225,7 @@ func populateCandidate(candidate *aivenCandidate, resource *schema.Resource) err
 			tableId := routeAttrs.RouteTableId
 			destinationCidrBlock := routeAttrs.RouteDestinationCidrBlock
 			id := fmt.Sprintf("%s_%s", tableId, destinationCidrBlock)
-			address := fmt.Sprintf("%s.%s[\"%s\"]", resource.Type, resource.Name, instance.IndexKey)
+			address := fmt.Sprintf("%s.%s[\"%s\"]", resource.Type, resource.Name, indexedInstance.IndexKey)
 			key := schema.Key{
 				Address: address,
 				Id:      id,
@@ -231,7 +235,7 @@ func populateCandidate(candidate *aivenCandidate, resource *schema.Resource) err
 				RouteTableId:              tableId,
 				RouteDestinationCidrBlock: destinationCidrBlock,
 			}
-			routes[instance.IndexKey] = route
+			routes[indexKey] = route
 		}
 		if candidate.awsRoutResources == nil {
 			candidate.awsRoutResources = &routes

@@ -22,9 +22,13 @@ type Resource struct {
 }
 
 type Instance struct {
-	Attrs    Attributes `hcl:"attributes,block"`
-	IndexKey string     `hcl:"index_key,optional"`
-	Rest     hcl.Body   `hcl:"rest,remain"`
+	Attrs Attributes `hcl:"attributes,block"`
+	Rest  hcl.Body   `hcl:"rest,remain"`
+}
+
+type IndexedInstance struct {
+	IndexKey string   `hcl:"index_key,attr"`
+	Rest     hcl.Body `hcl:"rest,remain"`
 }
 
 type Attributes struct {

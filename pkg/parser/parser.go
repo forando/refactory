@@ -5,6 +5,7 @@ import (
 	"github.com/forando/refactory/pkg/filesystem"
 	"github.com/forando/refactory/pkg/schema"
 	"github.com/hashicorp/hcl/v2"
+	"github.com/hashicorp/hcl/v2/gohcl"
 	"github.com/hashicorp/hcl/v2/hclwrite"
 	"github.com/pkg/errors"
 	"log"
@@ -133,10 +134,15 @@ func ParseTfState(file string) (*map[string][]schema.TfImport, error) {
 				id = instance.Attrs.Id
 			}
 			if resource.Type == "aws_ssoadmin_account_assignment" {
-				if len(instance.IndexKey) == 0 {
+				var indexedInstance schema.IndexedInstance
+				if err := gohcl.DecodeBody(instance.Rest, nil, &indexedInstance); err != nil {
+					return nil, err
+				}
+
+				if len(indexedInstance.IndexKey) == 0 {
 					return nil, errors.Errorf("module: %s of type: %s does not have index_key property", resource.Module, resource.Type)
 				}
-				address = fmt.Sprintf("%s['%s']", address, instance.IndexKey)
+				address = fmt.Sprintf("%s['%s']", address, indexedInstance.IndexKey)
 			}
 			tfImport := schema.TfImport{Address: address, Id: id}
 			tfImports = append(tfImports, tfImport)
