@@ -15,10 +15,17 @@ func NewTerragrunt(dir string) *Terragrunt {
 	return &Terragrunt{iacTool{Name: "terragrunt", Dir: dir}}
 }
 
-func (t *Terragrunt) Init() error {
+func (t *Terragrunt) Init(backendConfig string) error {
 	data := make(chan *OutPut)
 	fmt.Printf("Initialazing %s...\n", t.Name)
-	t.RunWithOutputChannel(data, t.Name, "init", "--terragrunt-non-interactive", "-input=false")
+
+	if len(backendConfig) > 0 {
+		backendConfigFlag := fmt.Sprintf("-backend-config=%s", backendConfig)
+		t.RunWithOutputChannel(data, t.Name, "init", "--terragrunt-non-interactive", "-input=false", backendConfigFlag)
+	} else {
+		t.RunWithOutputChannel(data, t.Name, "init", "--terragrunt-non-interactive", "-input=false")
+	}
+
 	for output := range data {
 		msg := string(output.Bytes)
 		if output.Type == StdError {

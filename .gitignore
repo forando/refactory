@@ -121,3 +121,4 @@ output
 go.work
 
 # End of https://github.com/github/gitignore/blob/main/Go.gitignore
+dist/

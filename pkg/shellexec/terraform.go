@@ -14,10 +14,15 @@ func NewTerraform(dir string) *Terraform {
 	return &Terraform{iacTool{Name: "terraform", Dir: dir}}
 }
 
-func (t *Terraform) Init() error {
+func (t *Terraform) Init(backendConfig string) error {
 	data := make(chan *OutPut)
 	fmt.Printf("Initialazing %s...\n", t.Name)
-	t.RunWithOutputChannel(data, t.Name, "init", "-input=false")
+	if len(backendConfig) > 0 {
+		backendConfigFlag := fmt.Sprintf("-backend-config=%s", backendConfig)
+		t.RunWithOutputChannel(data, t.Name, "init", "-input=false", backendConfigFlag)
+	} else {
+		t.RunWithOutputChannel(data, t.Name, "init", "-input=false")
+	}
 	for output := range data {
 		if output.Type == StdError {
 			return errors.New(string(output.Bytes))

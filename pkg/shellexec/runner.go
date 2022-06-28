@@ -10,7 +10,7 @@ import (
 )
 
 type CmdRunner interface {
-	Init() error
+	Init(backendConfig string) error
 	StatePull() (*[]byte, error)
 	StateList() (*[]string, error)
 	StateMove(src string, dest string, dryRun bool) error

@@ -17,26 +17,36 @@ import (
 
 func main() {
 
+	backendConfigFlag := flag.String("backend-config", "", "path to a terraform.tfstate file. See: https://www.terraform.io/language/settings/backends/configuration#partial-configuration")
+
 	flag.Usage = func() {
 		fmt.Printf("Usage of %s:\n", os.Args[0])
-		fmt.Printf("%s [path/to/tfstate1.json path/to/tfstate2.json...]\n", os.Args[0])
-		fmt.Println("Running the program with no args would let you pull the tfState from remote.")
+		fmt.Printf("%s [FLAGS...] <path/to/tfstate1.json> <path/to/tfstate2.json>...\n", os.Args[0])
+		fmt.Println("Running the program with no args would let you pull the terraform.tfstate from remote.")
 		fmt.Println("It would also let you move resources withing the same state.")
+		fmt.Println("FLAGS:")
+		flag.PrintDefaults()
 	}
 
 	flag.Parse()
 
 	states := flag.Args()
 
+	backendConfig := ""
+
+	if len(*backendConfigFlag) > 0 {
+		backendConfig = *backendConfigFlag
+	}
+
 	if len(states) > 0 {
-		goOfflinePath(states)
+		goOfflinePath(backendConfig, states)
 	} else {
-		goOnlinePath()
+		goOnlinePath(backendConfig)
 	}
 	println("\nBye :-)")
 }
 
-func goOfflinePath(states []string) {
+func goOfflinePath(backendConfig string, states []string) {
 	var allConsumers []schema.AivenConsumerModule
 	consumersByKey := make(map[string][]schema.ConflictingConsumer)
 	println()
@@ -76,7 +86,7 @@ func goOfflinePath(states []string) {
 		toolName := getIacToolName()
 		projectPath := getProjectPath(toolName)
 		runner := shellexec.GetCmdRunner(toolName, projectPath)
-		if err := runner.Init(); err != nil {
+		if err := runner.Init(backendConfig); err != nil {
 			panic(err)
 		}
 
@@ -94,7 +104,7 @@ func goOfflinePath(states []string) {
 	}
 }
 
-func goOnlinePath() {
+func goOnlinePath(backendConfig string) {
 	var err error
 	var producers *map[string]schema.AivenProducerModule
 	var consumers *map[string]schema.AivenConsumerModule
@@ -107,7 +117,7 @@ func goOnlinePath() {
 
 	runner := shellexec.GetCmdRunner(toolName, projectPath)
 
-	if err := runner.Init(); err != nil {
+	if err := runner.Init(backendConfig); err != nil {
 		panic(err)
 	}
 
