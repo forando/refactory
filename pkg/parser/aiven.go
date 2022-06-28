@@ -211,9 +211,10 @@ func populateCandidate(candidate *aivenCandidate, resource *schema.Resource) err
 			indexKey := fmt.Sprintf("%s/%s", resource.Name, indexedInstance.IndexKey)
 			if _, found := routes[indexKey]; found {
 				return errors.Errorf(
-					"module: %s of type: %s already hase instance object with index_key = %s",
+					"module: %s, resource of type: %s name: %s already hase instance object with index_key = %s",
 					resource.Module,
 					resource.Type,
+					resource.Name,
 					indexedInstance.IndexKey,
 				)
 			}
