@@ -1,0 +1,22 @@
+# .goreleaser.yml
+project_name: aiven
+builds:
+  - env: [ CGO_ENABLED=0 ]
+    goos:
+      - linux
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+    id: "aiven"
+    dir: .
+    main: ./cmd/aiven/main.go
+
+release:
+  draft: true
+
+changelog:
+  skip: false
+
+  use: git
+  sort: asc
