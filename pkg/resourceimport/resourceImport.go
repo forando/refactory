@@ -142,7 +142,7 @@ func importResources(dir string, resources chan<- schema.ResourceCount, res chan
 
 	terragrunt := shellexec.NewTerragrunt(dir)
 
-	if err := terragrunt.Init(); err != nil {
+	if err := terragrunt.Init(""); err != nil {
 		cleanErrors := filesystem.CleanDir(dir)
 		res <- &schema.ErrResult{Status: schema.Err, Dir: dir, ResourceCount: resourceCount, Message: err.Error()}
 		done <- schema.Done{Status: schema.Err, Dir: dir, FailedResource: &schema.ImportResource{Address: "", Id: ""}, ResourceCount: resourceCount, Message: err.Error(), CleanErrors: cleanErrors}
