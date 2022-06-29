@@ -27,7 +27,7 @@ type Instance struct {
 }
 
 type IndexedInstance struct {
-	IndexKey string   `hcl:"index_key,attr"`
+	IndexKey string   `hcl:"index_key,optional"`
 	Rest     hcl.Body `hcl:"rest,remain"`
 }
 

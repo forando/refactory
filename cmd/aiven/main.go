@@ -50,6 +50,7 @@ func goOfflinePath(backendConfig string, states []string) {
 	var allConsumers []schema.AivenConsumerModule
 	consumersByKey := make(map[string][]schema.ConflictingConsumer)
 	println()
+	toolName := getIacToolName()
 	for _, state := range states {
 		var err error
 		var producers *map[string]schema.AivenProducerModule
@@ -68,7 +69,7 @@ func goOfflinePath(backendConfig string, states []string) {
 
 	if getApproval("Do you want to generate a new module?") {
 		newModulePath := getPathForNewModule()
-		aivenFactory := factory.NewAivenTerraform(newModulePath)
+		aivenFactory := factory.GetAivenFactory(toolName, newModulePath)
 		if err := aivenFactory.BootstrapNewModule(&allConsumers); err != nil {
 			panic(err)
 		}
@@ -83,7 +84,6 @@ func goOfflinePath(backendConfig string, states []string) {
 			return
 		}
 		checkAws()
-		toolName := getIacToolName()
 		projectPath := getProjectPath(toolName)
 		runner := shellexec.GetCmdRunner(toolName, projectPath)
 		if err := runner.Init(backendConfig); err != nil {
@@ -133,7 +133,7 @@ func goOnlinePath(backendConfig string) {
 
 	if getApproval("Do you want to generate a new module?") {
 		newModulePath := getPathForNewModule()
-		aivenFactory := factory.NewAivenTerraform(newModulePath)
+		aivenFactory := factory.GetAivenFactory(toolName, newModulePath)
 		if err := aivenFactory.BootstrapNewModule(&allConsumers); err != nil {
 			panic(err)
 		}
